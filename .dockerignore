@@ -1,0 +1,11 @@
+# Keep the build context small and avoid copying local builds/caches.
+node_modules
+dist
+.angular
+.nx
+.git
+.idea
+.vscode
+*.log
+Dockerfile
+docker-compose*.yml

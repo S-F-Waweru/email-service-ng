@@ -1,0 +1,25 @@
+# Runs the dashboard next to the email-service backend.
+#
+# 1. Start the backend first (cd ../email-service && npm run services:up).
+#    Its Compose project creates the network "email-service_default" with the
+#    API reachable as http://app:3000.
+# 2. docker compose up -d --build   →   http://localhost:8080
+#
+# Different setup? Set API_UPSTREAM (e.g. http://host.docker.internal:3000 for
+# a backend on the host) and/or BACKEND_NETWORK.
+services:
+  web:
+    build: .
+    image: email-service-ng
+    environment:
+      API_UPSTREAM: ${API_UPSTREAM:-http://app:3000}
+    ports:
+      - '127.0.0.1:${WEB_PORT:-8080}:80'
+    networks:
+      - backend
+    restart: unless-stopped
+
+networks:
+  backend:
+    name: ${BACKEND_NETWORK:-email-service_default}
+    external: true
