@@ -1,2 +1,136 @@
-<app-page-header title="Users" description="Who can sign in to the dashboard and which companies they see." />
-<app-coming-soon icon="lucideUsers" text="Create and edit users, assign companies, reset passwords." />
+<app-page-header title="Users" description="Who can sign in to the dashboard and which companies they see.">
+  <button hlmBtn variant="outline" size="sm" (click)="store.load()" [disabled]="store.loading()">
+    <ng-icon name="lucideRefreshCw" [class.animate-spin]="store.loading()" />
+    Refresh
+  </button>
+  <button hlmBtn size="sm" (click)="editing.set('new')">
+    <ng-icon name="lucidePlus" />
+    New user
+  </button>
+</app-page-header>
+
+<div hlmInputGroup class="mb-4 w-full sm:w-72">
+  <div hlmInputGroupAddon>
+    <ng-icon name="lucideSearch" />
+  </div>
+  <input
+    hlmInputGroupInput
+    type="search"
+    placeholder="Search name or email"
+    aria-label="Search users"
+    [value]="store.search()"
+    (input)="store.search.set($any($event.target).value)"
+  />
+</div>
+
+<div class="overflow-hidden rounded-lg border">
+  <div hlmTableContainer>
+    <table hlmTable>
+      <thead hlmTHead>
+        <tr hlmTr>
+          <th hlmTh>User</th>
+          <th hlmTh class="w-36">Role</th>
+          <th hlmTh class="hidden md:table-cell">Companies</th>
+          <th hlmTh class="hidden lg:table-cell w-32">Added</th>
+          <th hlmTh class="w-24">Status</th>
+          <th hlmTh class="w-12"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody hlmTBody>
+        @if (store.loading() && store.users().length === 0) {
+          @for (row of skeletonRows; track row) {
+            <tr hlmTr>
+              <td hlmTd><hlm-skeleton class="h-4 w-48" /></td>
+              <td hlmTd><hlm-skeleton class="h-5 w-24 rounded-full" /></td>
+              <td hlmTd class="hidden md:table-cell"><hlm-skeleton class="h-4 w-32" /></td>
+              <td hlmTd class="hidden lg:table-cell"><hlm-skeleton class="h-4 w-20" /></td>
+              <td hlmTd><hlm-skeleton class="h-5 w-14 rounded-full" /></td>
+              <td hlmTd></td>
+            </tr>
+          }
+        }
+        @for (user of store.users(); track user.id) {
+          <tr hlmTr [class.opacity-60]="!user.isActive">
+            <td hlmTd>
+              <div class="grid min-w-0">
+                <span class="truncate font-medium">
+                  {{ user.fullName }}
+                  @if (user.id === store.currentUserId()) {
+                    <span class="text-muted-foreground font-normal">(you)</span>
+                  }
+                </span>
+                <span class="text-muted-foreground truncate text-xs">{{ user.email }}</span>
+              </div>
+            </td>
+            <td hlmTd>
+              @if (user.role === 'super_admin') {
+                <span hlmBadge>
+                  <ng-icon name="lucideShieldCheck" />
+                  Administrator
+                </span>
+              } @else {
+                <span hlmBadge variant="outline">Company user</span>
+              }
+            </td>
+            <td hlmTd class="hidden max-w-xs md:table-cell">
+              <span class="block truncate" [title]="companiesTitle(user)" [class.text-destructive]="user.role === 'company_user' && !user.sites.length">
+                {{ companies(user) }}
+              </span>
+            </td>
+            <td hlmTd class="text-muted-foreground hidden whitespace-nowrap lg:table-cell">{{ user.createdAt | date: 'mediumDate' }}</td>
+            <td hlmTd>
+              @if (user.isActive) {
+                <span hlmBadge class="bg-success/15 text-success">Active</span>
+              } @else {
+                <span hlmBadge variant="outline">Inactive</span>
+              }
+            </td>
+            <td hlmTd class="text-end">
+              <button hlmBtn variant="ghost" size="icon-sm" [hlmDropdownMenuTrigger]="actions" [hlmDropdownMenuTriggerData]="{ $implicit: user }" align="end" [attr.aria-label]="'Actions for ' + user.fullName">
+                <ng-icon name="lucideEllipsis" />
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  @if (!store.loading() && !store.error() && store.users().length === 0) {
+    <div hlmEmpty class="py-12">
+      <div hlmEmptyHeader>
+        <div hlmEmptyMedia variant="icon"><ng-icon name="lucideUsers" /></div>
+        <div hlmEmptyTitle>{{ store.search() ? 'No matching users' : 'No users' }}</div>
+        <div hlmEmptyDescription>{{ store.search() ? 'Try another name or email.' : 'Add someone to give them dashboard access.' }}</div>
+      </div>
+    </div>
+  }
+
+  @if (store.error() && store.users().length === 0) {
+    <div hlmEmpty class="py-12">
+      <div hlmEmptyHeader>
+        <div hlmEmptyTitle>{{ store.error()!.title }}</div>
+        <div hlmEmptyDescription>{{ store.error()!.messages[0] }}</div>
+      </div>
+      <div hlmEmptyContent>
+        <button hlmBtn variant="outline" size="sm" (click)="store.load()">Try again</button>
+      </div>
+    </div>
+  }
+</div>
+
+<ng-template #actions let-user>
+  <hlm-dropdown-menu class="w-48">
+    <button hlmDropdownMenuItem (triggered)="editing.set(user)">
+      <ng-icon name="lucidePencil" />
+      Edit
+    </button>
+    <button hlmDropdownMenuItem (triggered)="resetting.set(user)">
+      <ng-icon name="lucideKeyRound" />
+      Reset password…
+    </button>
+  </hlm-dropdown-menu>
+</ng-template>
+
+<app-user-form-dialog [open]="editing() !== null" [user]="editUser()" (closed)="editing.set(null)" />
+<app-reset-password-dialog [user]="resetting()" (closed)="resetting.set(null)" />

@@ -1,0 +1,51 @@
+<hlm-dialog [state]="apiKey() ? 'open' : 'closed'" (stateChanged)="onState($event)">
+  <hlm-dialog-content *hlmDialogPortal="let ctx" class="sm:max-w-lg">
+    <hlm-dialog-header>
+      <h2 hlmDialogTitle>
+        @switch (reason()) {
+          @case ('created') { {{ siteName() }} is ready }
+          @case ('rotated') { New API key for {{ siteName() }} }
+          @default { API key for {{ siteName() }} }
+        }
+      </h2>
+      <p hlmDialogDescription>
+        Put this in the website's contact form as the <code class="font-mono">x-api-key</code> header, with
+        <code class="font-mono">siteId: "{{ siteId() }}"</code> in the body.
+      </p>
+    </hlm-dialog-header>
+
+    <div hlmInputGroup>
+      <input
+        hlmInputGroupInput
+        readonly
+        class="font-mono"
+        aria-label="API key"
+        [type]="visible() ? 'text' : 'password'"
+        [value]="apiKey() ?? ''"
+        (focus)="$any($event.target).select()"
+      />
+      <div hlmInputGroupAddon align="inline-end">
+        <button hlmInputGroupButton size="icon-xs" type="button" [attr.aria-label]="visible() ? 'Hide key' : 'Show key'" (click)="visible.set(!visible())">
+          <ng-icon [name]="visible() ? 'lucideEyeOff' : 'lucideEye'" />
+        </button>
+        <button hlmInputGroupButton size="icon-xs" type="button" aria-label="Copy key" (click)="copy()">
+          <ng-icon [name]="copied() ? 'lucideCheck' : 'lucideCopy'" />
+        </button>
+      </div>
+    </div>
+
+    <div class="bg-warning/10 text-foreground flex gap-2 rounded-md p-3 text-xs">
+      <ng-icon name="lucideTriangleAlert" class="text-warning mt-0.5 shrink-0" />
+      <span>
+        Treat it like a password: anyone with it can submit forms as this site.
+        @if (reason() === 'rotated') {
+          <strong>The old key has stopped working.</strong> Update the website now.
+        }
+      </span>
+    </div>
+
+    <hlm-dialog-footer>
+      <button hlmBtn type="button" (click)="closed.emit()">Done</button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>

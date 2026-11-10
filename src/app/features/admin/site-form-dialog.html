@@ -1,0 +1,137 @@
+<hlm-dialog [state]="open() ? 'open' : 'closed'" (stateChanged)="onState($event)">
+  <hlm-dialog-content *hlmDialogPortal="let ctx" class="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+    <hlm-dialog-header>
+      <h2 hlmDialogTitle>{{ isNew() ? 'New site' : 'Edit ' + site()!.name }}</h2>
+      <p hlmDialogDescription>
+        {{ isNew() ? 'A website that can submit contact forms. You get its API key after saving.' : 'Changes apply to the next email sent.' }}
+      </p>
+    </hlm-dialog-header>
+
+    <form id="site-form" class="grid gap-4" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="grid gap-1.5">
+        <label hlmLabel for="site-id">Site id</label>
+        <input hlmInput id="site-id" formControlName="id" placeholder="acme" class="font-mono" autocomplete="off" />
+        @if (error('id'); as message) {
+          <p class="text-destructive text-xs">{{ message }}</p>
+        } @else {
+          <p class="text-muted-foreground text-xs">
+            {{ isNew() ? 'What the website sends as siteId. It can never be changed.' : 'Permanent; cannot be changed.' }}
+          </p>
+        }
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="grid gap-1.5">
+          <label hlmLabel for="site-name">Company name</label>
+          <input hlmInput id="site-name" formControlName="name" placeholder="Acme Ltd" />
+          @if (error('name'); as message) {
+            <p class="text-destructive text-xs">{{ message }}</p>
+          }
+        </div>
+        <div class="grid gap-1.5">
+          <label hlmLabel for="site-recipient">Recipient</label>
+          <input hlmInput id="site-recipient" type="email" formControlName="recipient" placeholder="contact@acme.com" />
+          @if (error('recipient'); as message) {
+            <p class="text-destructive text-xs">{{ message }}</p>
+          }
+        </div>
+      </div>
+
+      @if (!isNew()) {
+        <label class="flex items-center justify-between gap-4 rounded-md border p-3 text-sm">
+          <span class="grid gap-0.5">
+            <span class="font-medium">Active</span>
+            <span class="text-muted-foreground text-xs">Inactive sites reject new submissions.</span>
+          </span>
+          <hlm-switch [checked]="form.controls.isActive.value" (checkedChange)="form.controls.isActive.setValue($event)" />
+        </label>
+      }
+
+      <div class="grid gap-1.5">
+        <label hlmLabel for="site-from">Sender (From)</label>
+        <input hlmInput id="site-from" formControlName="smtpFrom" placeholder="Acme Ltd <no-reply@acme.com>" />
+        @if (error('smtpFrom'); as message) {
+          <p class="text-destructive text-xs">{{ message }}</p>
+        } @else {
+          <p class="text-muted-foreground text-xs">
+            {{ useSmtp() ? 'Required with your own server.' : 'Optional. Empty uses the service default.' }}
+          </p>
+        }
+      </div>
+
+      <!-- SMTP -->
+      <div class="grid gap-4 rounded-md border p-3">
+        <label class="flex items-center justify-between gap-4 text-sm">
+          <span class="grid gap-0.5">
+            <span class="font-medium">Use the company's own mail server</span>
+            <span class="text-muted-foreground text-xs">Off: emails go through the service's default SMTP.</span>
+          </span>
+          <hlm-switch [checked]="useSmtp()" (checkedChange)="setUseSmtp($event)" />
+        </label>
+
+        @if (useSmtp()) {
+          <div class="grid gap-4 sm:grid-cols-[1fr_7rem]">
+            <div class="grid gap-1.5">
+              <label hlmLabel for="smtp-host">Host</label>
+              <input hlmInput id="smtp-host" formControlName="smtpHost" placeholder="smtp.acme.com" autocomplete="off" />
+              @if (error('smtpHost'); as message) {
+                <p class="text-destructive text-xs">{{ message }}</p>
+              }
+            </div>
+            <div class="grid gap-1.5">
+              <label hlmLabel for="smtp-port">Port</label>
+              <input
+                hlmInput
+                id="smtp-port"
+                type="number"
+                formControlName="smtpPort"
+                [placeholder]="form.controls.smtpSecure.value ? '465' : '587'"
+              />
+              @if (error('smtpPort'); as message) {
+                <p class="text-destructive text-xs">{{ message }}</p>
+              }
+            </div>
+          </div>
+
+          <label class="flex items-center gap-2 text-sm">
+            <hlm-switch [checked]="form.controls.smtpSecure.value" (checkedChange)="form.controls.smtpSecure.setValue($event)" />
+            Use TLS from the start (usually port 465)
+          </label>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="grid gap-1.5">
+              <label hlmLabel for="smtp-user">Username</label>
+              <input hlmInput id="smtp-user" formControlName="smtpUser" autocomplete="off" />
+            </div>
+            <div class="grid gap-1.5">
+              <label hlmLabel for="smtp-pass">Password</label>
+              <input
+                hlmInput
+                id="smtp-pass"
+                type="password"
+                formControlName="smtpPass"
+                autocomplete="new-password"
+                [placeholder]="site()?.smtp?.hasPassword ? 'Unchanged' : ''"
+              />
+              @if (site()?.smtp?.hasPassword) {
+                <p class="text-muted-foreground text-xs">Leave empty to keep the stored password.</p>
+              }
+            </div>
+          </div>
+        } @else if (site()?.smtp) {
+          <p class="text-warning text-xs">Saving will remove this site's own SMTP settings.</p>
+        }
+      </div>
+    </form>
+
+    <hlm-dialog-footer>
+      <button hlmBtn variant="outline" type="button" (click)="closed.emit()" [disabled]="store.busy()">Cancel</button>
+      <button hlmBtn type="submit" form="site-form" [disabled]="store.busy()">
+        @if (store.busy()) {
+          <hlm-spinner class="size-4" />
+        }
+        {{ isNew() ? 'Create site' : 'Save' }}
+      </button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>

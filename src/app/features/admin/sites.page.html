@@ -1,2 +1,149 @@
-<app-page-header title="Sites" description="Websites that can submit contact forms, their API keys and mail settings." />
-<app-coming-soon icon="lucideGlobe" text="Create and edit sites, reveal or rotate API keys, per-site SMTP." />
+<app-page-header title="Sites" description="Websites that can submit contact forms, their API keys and mail settings.">
+  <button hlmBtn variant="outline" size="sm" (click)="store.load()" [disabled]="store.loading()">
+    <ng-icon name="lucideRefreshCw" [class.animate-spin]="store.loading()" />
+    Refresh
+  </button>
+  <button hlmBtn size="sm" (click)="editing.set('new')">
+    <ng-icon name="lucidePlus" />
+    New site
+  </button>
+</app-page-header>
+
+<div class="overflow-hidden rounded-lg border">
+  <div hlmTableContainer>
+    <table hlmTable>
+      <thead hlmTHead>
+        <tr hlmTr>
+          <th hlmTh>Site</th>
+          <th hlmTh class="hidden md:table-cell">Recipient</th>
+          <th hlmTh class="hidden lg:table-cell">Mail server</th>
+          <th hlmTh class="w-24">Status</th>
+          <th hlmTh class="w-12"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody hlmTBody>
+        @if (store.loading() && store.sites().length === 0) {
+          @for (row of skeletonRows; track row) {
+            <tr hlmTr>
+              <td hlmTd><hlm-skeleton class="h-4 w-40" /></td>
+              <td hlmTd class="hidden md:table-cell"><hlm-skeleton class="h-4 w-48" /></td>
+              <td hlmTd class="hidden lg:table-cell"><hlm-skeleton class="h-4 w-32" /></td>
+              <td hlmTd><hlm-skeleton class="h-5 w-14 rounded-full" /></td>
+              <td hlmTd></td>
+            </tr>
+          }
+        }
+        @for (site of store.sites(); track site.id) {
+          <tr hlmTr [class.opacity-60]="!site.isActive">
+            <td hlmTd>
+              <div class="grid min-w-0">
+                <span class="truncate font-medium">{{ site.name }}</span>
+                <span class="text-muted-foreground truncate font-mono text-xs">{{ site.id }}</span>
+              </div>
+            </td>
+            <td hlmTd class="hidden md:table-cell">
+              <div class="grid min-w-0">
+                <span class="truncate">{{ site.recipient }}</span>
+                @if (site.cc.length) {
+                  <span class="text-muted-foreground text-xs">+ {{ site.cc.length }} CC</span>
+                }
+              </div>
+            </td>
+            <td hlmTd class="hidden lg:table-cell">
+              @if (site.smtp; as smtp) {
+                <span class="font-mono text-xs">{{ smtp.host }}{{ smtp.port ? ':' + smtp.port : '' }}</span>
+              } @else {
+                <span class="text-muted-foreground">Default</span>
+              }
+            </td>
+            <td hlmTd>
+              @if (site.isActive) {
+                <span hlmBadge class="bg-success/15 text-success">Active</span>
+              } @else {
+                <span hlmBadge variant="outline">Inactive</span>
+              }
+            </td>
+            <td hlmTd class="text-end">
+              <button hlmBtn variant="ghost" size="icon-sm" [hlmDropdownMenuTrigger]="actions" [hlmDropdownMenuTriggerData]="{ $implicit: site }" align="end" [attr.aria-label]="'Actions for ' + site.name">
+                <ng-icon name="lucideEllipsis" />
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  @if (!store.loading() && !store.error() && store.sites().length === 0) {
+    <div hlmEmpty class="py-12">
+      <div hlmEmptyHeader>
+        <div hlmEmptyMedia variant="icon"><ng-icon name="lucideGlobe" /></div>
+        <div hlmEmptyTitle>No sites yet</div>
+        <div hlmEmptyDescription>Add a site to give a website its API key.</div>
+      </div>
+      <div hlmEmptyContent>
+        <button hlmBtn size="sm" (click)="editing.set('new')">New site</button>
+      </div>
+    </div>
+  }
+
+  @if (store.error() && store.sites().length === 0) {
+    <div hlmEmpty class="py-12">
+      <div hlmEmptyHeader>
+        <div hlmEmptyTitle>{{ store.error()!.title }}</div>
+        <div hlmEmptyDescription>{{ store.error()!.messages[0] }}</div>
+      </div>
+      <div hlmEmptyContent>
+        <button hlmBtn variant="outline" size="sm" (click)="store.load()">Try again</button>
+      </div>
+    </div>
+  }
+</div>
+
+<ng-template #actions let-site>
+  <hlm-dropdown-menu class="w-48">
+    <button hlmDropdownMenuItem (triggered)="editing.set(site)">
+      <ng-icon name="lucidePencil" />
+      Edit
+    </button>
+    <button hlmDropdownMenuItem (triggered)="reveal(site)">
+      <ng-icon name="lucideKeyRound" />
+      Show API key
+    </button>
+    <div hlmDropdownMenuSeparator></div>
+    <button hlmDropdownMenuItem class="text-destructive" (triggered)="rotating.set(site)">
+      <ng-icon name="lucideRotateCw" />
+      Rotate API key…
+    </button>
+  </hlm-dropdown-menu>
+</ng-template>
+
+<app-site-form-dialog [open]="editing() !== null" [site]="editSite()" (closed)="editing.set(null)" (created)="onCreated($event)" />
+
+<app-api-key-dialog
+  [apiKey]="shownKey()?.key ?? null"
+  [siteName]="shownKey()?.site?.name ?? ''"
+  [siteId]="shownKey()?.site?.id ?? ''"
+  [reason]="shownKey()?.reason ?? 'revealed'"
+  (closed)="shownKey.set(null)"
+/>
+
+<hlm-alert-dialog [state]="rotating() ? 'open' : 'closed'" (stateChanged)="onRotateState($event)">
+  <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
+    <hlm-alert-dialog-header>
+      <h2 hlmAlertDialogTitle>Rotate the API key for {{ rotating()?.name }}?</h2>
+      <p hlmAlertDialogDescription>
+        The current key stops working immediately. The website's contact form will fail until it uses the new key.
+      </p>
+    </hlm-alert-dialog-header>
+    <hlm-alert-dialog-footer>
+      <button hlmAlertDialogCancel [disabled]="store.busy()">Cancel</button>
+      <button hlmAlertDialogAction variant="destructive" [disabled]="store.busy()" (click)="confirmRotate()">
+        @if (store.busy()) {
+          <hlm-spinner class="size-4" />
+        }
+        Rotate key
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>
