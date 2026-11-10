@@ -18,7 +18,8 @@ export class ThemeService {
   readonly brand = signal<BrandConfig>(configuredBrand);
   readonly mode = signal<ThemeMode>(readStoredMode() ?? configuredBrand.defaultMode);
 
-  private readonly systemDark = signal(this.media?.matches ?? false);
+  private lastBrandName = '';
+  private readonly systemDark =signal(this.media?.matches ?? false);
   readonly isDark = computed(() =>
     this.mode() === 'system' ? this.systemDark() : this.mode() === 'dark',
   );
@@ -79,7 +80,11 @@ export class ThemeService {
     }
     style.textContent = `:root { ${radius} ${declarations(light)} }\n:root.dark { ${declarations(dark)} }`;
 
-    this.document.title = brand.name;
+    // Only when no page has set its own title (a router TitleStrategy may own it).
+    if (!this.document.title || this.document.title === this.lastBrandName || !this.lastBrandName) {
+      this.document.title = brand.name;
+    }
+    this.lastBrandName = brand.name;
     this.setFavicon(brand.logo.secondary.light);
   }
 
