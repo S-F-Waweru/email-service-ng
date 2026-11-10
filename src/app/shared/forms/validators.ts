@@ -5,6 +5,10 @@ import { Validators, type ValidatorFn } from '@angular/forms';
  * common miss: Angular's Validators.email accepts "admin@example" (no TLD),
  * the backend rejects it.
  */
-export const emailValidator: ValidatorFn = Validators.pattern(
-  /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)*\.[a-zA-Z]{2,}$/,
-);
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)*\.[a-zA-Z]{2,}$/;
+
+export const emailValidator: ValidatorFn = Validators.pattern(EMAIL_PATTERN);
+
+export function isEmail(value: string): boolean {
+  return value.length <= 254 && EMAIL_PATTERN.test(value);
+}

@@ -1,0 +1,149 @@
+<section hlmCard>
+  <div hlmCardHeader>
+    <div class="flex items-center gap-2">
+      <h2 hlmCardTitle>{{ site().name }}</h2>
+      @if (!site().isActive) {
+        <span hlmBadge variant="outline">Inactive</span>
+      }
+      @if (dirty()) {
+        <span hlmBadge class="bg-warning/15 text-warning">Unsaved changes</span>
+      }
+    </div>
+    <p hlmCardDescription>
+      Site id <code class="bg-muted rounded px-1 font-mono">{{ site().id }}</code>
+    </p>
+  </div>
+
+  <div hlmCardContent class="grid gap-5">
+    <!-- Recipient -->
+    <div class="grid gap-1.5">
+      <span hlmLabel>Recipient</span>
+      <div class="bg-muted/50 flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+        <ng-icon name="lucideMail" class="text-muted-foreground" />
+        <span class="truncate">{{ site().recipient }}</span>
+      </div>
+      <p class="text-muted-foreground text-xs">Every contact email goes here. Ask an administrator to change it.</p>
+    </div>
+
+    <!-- CC list -->
+    <div class="grid gap-1.5">
+      <div class="flex items-baseline justify-between">
+        <label hlmLabel [for]="inputId()">CC</label>
+        <span class="text-muted-foreground text-xs" [class.text-warning]="full()">{{ cc().length }} / {{ max }}</span>
+      </div>
+
+      @if (cc().length) {
+        <ul class="flex flex-wrap gap-1.5" aria-label="CC addresses">
+          @for (email of cc(); track email) {
+            <li
+              class="bg-secondary/40 text-foreground flex items-center gap-1 rounded-full border py-0.5 ps-2.5 pe-1 text-xs"
+              [class.border-primary]="changes().added.includes(email)"
+            >
+              {{ email }}
+              <button
+                hlmBtn
+                variant="ghost"
+                size="icon-xs"
+                class="rounded-full"
+                [attr.aria-label]="'Remove ' + email"
+                [disabled]="saving()"
+                (click)="remove(email)"
+              >
+                <ng-icon name="lucideX" />
+              </button>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="text-muted-foreground text-xs">No one is CC'd. Add addresses below.</p>
+      }
+
+      <div hlmInputGroup class="mt-1">
+        <input
+          hlmInputGroupInput
+          [id]="inputId()"
+          type="email"
+          [placeholder]="full() ? 'CC list is full' : 'name@company.com'"
+          autocomplete="off"
+          [value]="draft()"
+          [disabled]="full() || saving()"
+          [attr.aria-invalid]="inputError() ? true : null"
+          (input)="onInput($any($event.target).value)"
+          (keydown)="onKeydown($event)"
+          (blur)="draft() && add()"
+        />
+        <div hlmInputGroupAddon align="inline-end">
+          <button hlmInputGroupButton type="button" [disabled]="!draft() || full() || saving()" (click)="add()">
+            <ng-icon name="lucidePlus" />
+            Add
+          </button>
+        </div>
+      </div>
+      @if (inputError()) {
+        <p class="text-destructive text-xs" role="alert">{{ inputError() }}</p>
+      } @else {
+        <p class="text-muted-foreground text-xs">
+          Press Enter or comma to add. You can paste several addresses at once.
+        </p>
+      }
+    </div>
+  </div>
+
+  @if (dirty()) {
+    <div hlmCardFooter class="justify-end gap-2 border-t">
+      <button hlmBtn variant="ghost" size="sm" [disabled]="saving()" (click)="discard()">
+        <ng-icon name="lucideUndo2" />
+        Discard
+      </button>
+      <button hlmBtn size="sm" [disabled]="saving()" (click)="confirming.set(true)">Save CC list</button>
+    </div>
+  }
+</section>
+
+<!-- Confirm: CC changes decide who receives future submissions. -->
+<hlm-alert-dialog [state]="confirming() ? 'open' : 'closed'" (stateChanged)="onDialogState($event)">
+  <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
+    <hlm-alert-dialog-header>
+      <h2 hlmAlertDialogTitle>Save CC list for {{ site().name }}?</h2>
+      <p hlmAlertDialogDescription>
+        These addresses will get a copy of every new contact email. Emails already sent are not affected.
+      </p>
+    </hlm-alert-dialog-header>
+
+    <div class="grid gap-2 text-xs">
+      @if (changes().added.length) {
+        <div>
+          <span class="text-success font-medium">Adding</span>
+          <ul class="mt-1 list-inside list-disc">
+            @for (email of changes().added; track email) {
+              <li>{{ email }}</li>
+            }
+          </ul>
+        </div>
+      }
+      @if (changes().removed.length) {
+        <div>
+          <span class="text-destructive font-medium">Removing</span>
+          <ul class="mt-1 list-inside list-disc">
+            @for (email of changes().removed; track email) {
+              <li>{{ email }}</li>
+            }
+          </ul>
+        </div>
+      }
+      @if (!changes().added.length && !changes().removed.length) {
+        <p class="text-muted-foreground">Only the order changed.</p>
+      }
+    </div>
+
+    <hlm-alert-dialog-footer>
+      <button hlmAlertDialogCancel [disabled]="saving()">Cancel</button>
+      <button hlmAlertDialogAction [disabled]="saving()" (click)="confirmSave()">
+        @if (saving()) {
+          <hlm-spinner class="size-4" />
+        }
+        Save
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>

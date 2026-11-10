@@ -1,2 +1,52 @@
-<app-page-header title="Companies" description="Where each company's contact emails go, and who is CC'd." />
-<app-coming-soon icon="lucideBuilding2" text="Recipient and CC list editor for each of your companies." />
+<app-page-header title="Companies" description="Where each company's contact emails go, and who gets a copy.">
+  <button hlmBtn variant="outline" size="sm" (click)="store.load()" [disabled]="store.loading()">
+    <ng-icon name="lucideRefreshCw" [class.animate-spin]="store.loading()" />
+    Refresh
+  </button>
+</app-page-header>
+
+@if (store.loading() && store.sites().length === 0) {
+  <div class="grid gap-4 lg:grid-cols-2">
+    @for (i of [1, 2]; track i) {
+      <div class="grid gap-3 rounded-lg border p-6">
+        <hlm-skeleton class="h-5 w-40" />
+        <hlm-skeleton class="h-9 w-full" />
+        <hlm-skeleton class="h-6 w-2/3" />
+        <hlm-skeleton class="h-9 w-full" />
+      </div>
+    }
+  </div>
+} @else if (store.error() && store.sites().length === 0) {
+  <div hlmEmpty class="rounded-lg border py-12">
+    <div hlmEmptyHeader>
+      <div hlmEmptyTitle>{{ store.error()!.title }}</div>
+      <div hlmEmptyDescription>{{ store.error()!.messages[0] }}</div>
+    </div>
+    <div hlmEmptyContent>
+      <button hlmBtn variant="outline" size="sm" (click)="store.load()">Try again</button>
+    </div>
+  </div>
+} @else if (store.sites().length === 0) {
+  <div hlmEmpty class="rounded-lg border border-dashed py-12">
+    <div hlmEmptyHeader>
+      <div hlmEmptyMedia variant="icon"><ng-icon name="lucideBuilding2" /></div>
+      <div hlmEmptyTitle>No companies</div>
+      <div hlmEmptyDescription>You haven't been given access to any company yet. Ask an administrator.</div>
+    </div>
+  </div>
+} @else {
+  <div class="grid items-start gap-4 lg:grid-cols-2">
+    @for (site of store.sites(); track site.id) {
+      <app-company-cc-card [site]="site" />
+    }
+  </div>
+
+  @if (store.hiddenCount() > 0) {
+    <p class="text-muted-foreground mt-4 text-xs">
+      Showing {{ company.label() }} only.
+      <button hlmBtn variant="link" size="sm" class="h-auto p-0" (click)="company.select(null)">
+        Show all {{ store.hiddenCount() + store.sites().length }} companies
+      </button>
+    </p>
+  }
+}
