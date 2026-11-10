@@ -5,10 +5,24 @@ two logos and two colours in `brand.config.ts`, and every Spartan component
 follows: text-on-colour contrast, dark-mode versions, hover tints, focus ring,
 sidebar, charts, favicon and page title are all derived.
 
-`/theme` is a theme lab: presets, colour pickers, radius, logo upload (SVG
-colours are extracted and a primary/secondary pair suggested), and a live
-preview of real components in light and dark. Nothing there is saved; copy the
-snippet it gives you into `brand.config.ts`.
+`/theme` is a theme lab:
+
+- **Controls:** presets, saved themes (this browser), colour pickers, font
+  (Google Fonts), corner radius, brand-coloured sidebar, status colours (with a
+  warning when "warning" looks like your secondary colour).
+- **Logo:** upload SVG/PNG logos; SVG colours are extracted and a pair
+  suggested. Tools: *Make dark version* (lightens colours that vanish on dark
+  backgrounds, downloadable SVG) and *Favicons* (16/32/180/192/512 PNGs).
+- **Views:** Components, Sample screen (sidebar, table, stats, toasts), Scales
+  (50–950 for primary, secondary and a brand-tinted grey), Contrast (WCAG
+  ratios for 12 text/background pairs in light and dark), Export.
+- **Light & dark** side by side, and **colour-blindness simulation**
+  (protanopia, deuteranopia, tritanopia, achromatopsia).
+- **Export:** brand.config snippet, CSS variables, Tailwind `@theme` scales,
+  JSON design tokens, or a **share link** (`/theme?p=…&s=…`) that opens the lab
+  with the theme loaded.
+
+Nothing in the lab changes the app; copy the config into `brand.config.ts`.
 
 ## Files
 
@@ -20,11 +34,16 @@ snippet it gives you into `brand.config.ts`.
 | `theme.service.ts` | Applies tokens, light/dark/system mode, favicon, title. |
 | `brand-logo.ts` | `<app-brand-logo />` / `<app-brand-logo variant="secondary" />`, swaps dark file automatically. |
 | `theme-toggle.ts` | Light/dark/system dropdown for a header. |
-| `theme-preview.ts` | The `/theme` lab page. |
+| `theme-css.ts` | Builds the stylesheet (all tokens, light and dark) from a brand. |
+| `fonts.ts` | Font choices and their Google Fonts URLs. |
+| `theme-preview.ts/.html` | The `/theme` lab page. |
+| `lab/` | Lab panels (contrast, scales, export, sample screen), share links and saved themes, logo tools, colour-blindness filters. |
 | `presets.ts` | Lab presets; add your own. |
 | `color.spec.ts` | Unit tests for the colour maths. |
 
 ## Copy into another project
+
+The sample screen's toast buttons need `<hlm-toaster />` in the app root.
 
 Requires spartan/ui set up with Tailwind 4 (`@spartan-ng/brain/hlm-tailwind-preset.css`
 imported in `styles.css`), `@ng-icons/lucide`, and these helm components:
@@ -53,7 +72,9 @@ imported in `styles.css`), `@ng-icons/lucide`, and these helm components:
      })();
    </script>
    ```
-6. `styles.css`: add the status colours used by the lab's badges (optional
+6. `styles.css`: change `:root {` to `:root, .light {` and `:root.dark {` to
+   `:root.dark, .dark {` (lets the lab show light and dark side by side).
+7. `styles.css`: add the status colours used by the lab's badges (optional
    elsewhere). Inside `@theme inline { ... }`, `:root { ... }` and `:root.dark { ... }`:
    ```css
    @theme inline {

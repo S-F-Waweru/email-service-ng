@@ -1,4 +1,4 @@
-import type { SidebarStyle } from './brand.types';
+import type { SidebarStyle, StatusColors } from './brand.types';
 
 // Small colour toolkit: turns the two brand hex colours into the full set of
 // Spartan CSS variables (light + dark). Uses OKLCH, the same space Spartan's
@@ -105,7 +105,12 @@ export type ThemeTokens = Record<string, string>;
  * Brand-driven Spartan tokens. Neutrals (background, border, muted, ...) stay
  * as defined in styles.css; only the colour-bearing tokens are replaced.
  */
-export function buildBrandTokens(primaryHex: string, secondaryHex: string, sidebar: SidebarStyle = 'neutral') {
+export function buildBrandTokens(
+  primaryHex: string,
+  secondaryHex: string,
+  sidebar: SidebarStyle = 'neutral',
+  status: StatusColors = {},
+) {
   const primary = hexToOklch(primaryHex);
   const secondary = hexToOklch(secondaryHex);
 
@@ -151,6 +156,16 @@ export function buildBrandTokens(primaryHex: string, secondaryHex: string, sideb
     '--chart-1': css(primaryDark),
     '--chart-2': css(secondaryDark),
   };
+
+  for (const [name, hex] of Object.entries(status)) {
+    if (!hex) continue;
+    const color = hexToOklch(hex);
+    const onDark = clampL(color, 0.62, 0.8);
+    light[`--${name}`] = css(color);
+    light[`--${name}-foreground`] = css(readableOn(color));
+    dark[`--${name}`] = css(onDark);
+    dark[`--${name}-foreground`] = css(readableOn(onDark));
+  }
 
   if (sidebar === 'primary') {
     Object.assign(light, brandSidebarTokens(primary, secondary));
@@ -242,7 +257,7 @@ export function suggestBrandColors(colors: ExtractedColor[]): { primary: string;
   return { primary: primary.hex, secondary: secondary.hex };
 }
 
-function hueDistance(a: number, b: number): number {
+export function hueDistance(a: number, b: number): number {
   const d = Math.abs(a - b) % 360;
   return d > 180 ? 360 - d : d;
 }
@@ -257,4 +272,29 @@ function normalizeHex(value: string): string | null {
   } catch {
     return null;
   }
+}
+
+// ---- Scales and parsing (theme lab) ----------------------------------------
+
+export const SCALE_STEPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
+const SCALE_L = [0.97, 0.935, 0.875, 0.8, 0.71, 0.625, 0.545, 0.465, 0.385, 0.305, 0.225];
+// Chroma peaks in the middle of the scale, like Tailwind's palettes.
+const SCALE_C = [0.12, 0.24, 0.45, 0.7, 0.9, 1, 1, 0.95, 0.85, 0.72, 0.6];
+
+/** Tailwind-style 50–950 scale with the colour's hue. `chroma` overrides saturation (0 = grey). */
+export function buildScale(hex: string, chroma?: number): { step: number; hex: string; oklch: Oklch }[] {
+  const base = hexToOklch(hex);
+  const c = chroma ?? Math.max(base.c, 0.02);
+  return SCALE_STEPS.map((step, i) => {
+    const oklch = { l: SCALE_L[i], c: c * SCALE_C[i], h: base.h };
+    return { step, hex: oklchToHex(oklch), oklch };
+  });
+}
+
+/** Reads `oklch(L C H)` / `oklch(L C H / a)` (L may be a %). Alpha is ignored. */
+export function parseOklch(value: string): Oklch | null {
+  const m = /oklch\(\s*([\d.]+)(%?)\s+([\d.]+)\s+([\d.]+)/i.exec(value);
+  if (!m) return null;
+  const l = Number(m[1]) / (m[2] ? 100 : 1);
+  return { l, c: Number(m[3]), h: Number(m[4]) };
 }

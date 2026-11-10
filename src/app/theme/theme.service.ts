@@ -2,12 +2,15 @@ import { DOCUMENT } from '@angular/common';
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { brand as configuredBrand } from './brand.config';
 import type { BrandConfig, LogoSource, ThemeMode } from './brand.types';
-import { buildBrandTokens, sidebarIsDark, type ThemeTokens } from './color';
+import { sidebarIsDark } from './color';
+import { fontById, googleFontsUrl } from './fonts';
+import { themeStylesheet } from './theme-css';
 
 // Same key as the inline script in index.html, which applies the mode before
 // Angular starts so a dark-mode user never sees a white flash.
 export const THEME_MODE_STORAGE_KEY = 'theme-mode';
 const STYLE_ELEMENT_ID = 'brand-theme';
+const FONT_LINK_ID = 'brand-font';
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
@@ -19,10 +22,20 @@ export class ThemeService {
   readonly mode = signal<ThemeMode>(readStoredMode() ?? configuredBrand.defaultMode);
 
   private lastBrandName = '';
-  private readonly systemDark =signal(this.media?.matches ?? false);
+  private readonly systemDark = signal(this.media?.matches ?? false);
   readonly isDark = computed(() =>
     this.mode() === 'system' ? this.systemDark() : this.mode() === 'dark',
   );
+  /**
+   * Temporarily forces the page into one mode without changing the user's
+   * choice. The theme lab sets 'light' for its side-by-side view, so the
+   * `.dark` preview pane is the only dark part of the page.
+   */
+  readonly pageModeOverride = signal<'light' | 'dark' | null>(null);
+  private readonly pageDark = computed(() => {
+    const forced = this.pageModeOverride();
+    return forced ? forced === 'dark' : this.isDark();
+  });
 
   /** Whether the sidebar background is dark (picks the logo file that shows on it). */
   readonly sidebarDark = computed(() =>
@@ -39,8 +52,8 @@ export class ThemeService {
 
     effect(() => {
       const root = this.document.documentElement;
-      root.classList.toggle('dark', this.isDark());
-      root.style.colorScheme = this.isDark() ? 'dark' : 'light';
+      root.classList.toggle('dark', this.pageDark());
+      root.style.colorScheme = this.pageDark() ? 'dark' : 'light';
     });
 
     effect(() => this.applyBrand(this.brand()));
@@ -74,9 +87,6 @@ export class ThemeService {
   }
 
   private applyBrand(brand: BrandConfig): void {
-    const { light, dark } = buildBrandTokens(brand.colors.primary, brand.colors.secondary, brand.sidebar);
-    const radius = `--radius: ${brand.radius}rem;`;
-
     // A <style> appended at the end of <head> comes after styles.css, so these
     // values win over Spartan's defaults at equal specificity.
     let style = this.document.getElementById(STYLE_ELEMENT_ID) as HTMLStyleElement | null;
@@ -85,7 +95,8 @@ export class ThemeService {
       style.id = STYLE_ELEMENT_ID;
       this.document.head.appendChild(style);
     }
-    style.textContent = `:root { ${radius} ${declarations(light)} }\n:root.dark { ${declarations(dark)} }`;
+    style.textContent = themeStylesheet(brand);
+    this.loadFont(brand.font);
 
     // Only when no page has set its own title (a router TitleStrategy may own it).
     if (!this.document.title || this.document.title === this.lastBrandName || !this.lastBrandName) {
@@ -93,6 +104,23 @@ export class ThemeService {
     }
     this.lastBrandName = brand.name;
     this.setFavicon(brand.logo.secondary.light);
+  }
+
+  /** Adds (or swaps) the Google Fonts stylesheet for the chosen font. */
+  private loadFont(id: string | undefined): void {
+    const url = googleFontsUrl(fontById(id));
+    let link = this.document.getElementById(FONT_LINK_ID) as HTMLLinkElement | null;
+    if (!url) {
+      link?.remove();
+      return;
+    }
+    if (!link) {
+      link = this.document.createElement('link');
+      link.id = FONT_LINK_ID;
+      link.rel = 'stylesheet';
+      this.document.head.appendChild(link);
+    }
+    if (link.href !== url) link.href = url;
   }
 
   private setFavicon(href: string): void {
@@ -107,11 +135,6 @@ export class ThemeService {
   }
 }
 
-function declarations(tokens: ThemeTokens): string {
-  return Object.entries(tokens)
-    .map(([name, value]) => `${name}: ${value};`)
-    .join(' ');
-}
 
 function readStoredMode(): ThemeMode | null {
   try {

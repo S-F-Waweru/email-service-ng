@@ -1,0 +1,469 @@
+<app-cvd-filters />
+
+<header class="bg-background/80 sticky top-0 z-10 border-b backdrop-blur">
+  <div class="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4">
+    <app-brand-logo class="h-7" />
+    <span class="text-muted-foreground ms-2 hidden text-sm sm:inline">Theme lab</span>
+    <span class="ms-auto"></span>
+    @if (!compare()) {
+      <app-theme-toggle />
+    }
+  </div>
+</header>
+
+<main class="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[340px_minmax(0,1fr)]">
+  <!-- ================= Controls ================= -->
+  <div class="grid h-fit gap-6">
+    <!-- Presets -->
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>Presets</h2>
+        <p hlmCardDescription>Starting points. Edit theme/presets.ts to add your own.</p>
+      </div>
+      <div hlmCardContent class="flex flex-wrap gap-2">
+        @for (preset of presets; track preset.name) {
+          <button
+            hlmBtn
+            variant="outline"
+            size="sm"
+            (click)="applyPreset(preset)"
+            [attr.aria-pressed]="isActive(preset)"
+            [class.border-primary]="isActive(preset)"
+          >
+            <span class="flex -space-x-1">
+              <span class="ring-background size-3 rounded-full ring-2" [style.background]="preset.primary"></span>
+              <span class="ring-background size-3 rounded-full ring-2" [style.background]="preset.secondary"></span>
+            </span>
+            {{ preset.name }}
+          </button>
+        }
+      </div>
+    </section>
+
+    <!-- Saved themes -->
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>Saved themes</h2>
+        <p hlmCardDescription>Kept in this browser only. Use Export to share.</p>
+      </div>
+      <div hlmCardContent class="grid gap-3">
+        <form class="flex gap-2" (submit)="$event.preventDefault(); saveTheme()">
+          <input
+            hlmInput
+            class="h-8 flex-1"
+            placeholder="Name, e.g. Helapay warm"
+            aria-label="Theme name"
+            maxlength="60"
+            [value]="saveName()"
+            (input)="saveName.set($any($event.target).value)"
+          />
+          <button hlmBtn size="sm" type="submit">
+            <ng-icon name="lucideBookmark" />
+            Save
+          </button>
+        </form>
+        @if (saved().length) {
+          <ul class="grid gap-1">
+            @for (item of saved(); track item.name) {
+              <li class="hover:bg-muted flex items-center gap-2 rounded-md px-2 py-1 text-sm">
+                <span class="flex -space-x-1">
+                  <span class="ring-background size-3 rounded-full ring-2" [style.background]="item.theme.colors.primary"></span>
+                  <span class="ring-background size-3 rounded-full ring-2" [style.background]="item.theme.colors.secondary"></span>
+                </span>
+                <button type="button" class="min-w-0 flex-1 truncate text-start hover:underline" (click)="applySaved(item)">
+                  {{ item.name }}
+                </button>
+                <button hlmBtn variant="ghost" size="icon-xs" [attr.aria-label]="'Delete ' + item.name" (click)="deleteSaved(item)">
+                  <ng-icon name="lucideTrash2" />
+                </button>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="text-muted-foreground text-xs">Nothing saved yet.</p>
+        }
+      </div>
+    </section>
+
+    <!-- Logo -->
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>Logo</h2>
+        <p hlmCardDescription>Try another project's logo. Colours are read from SVG files.</p>
+      </div>
+      <div hlmCardContent class="grid gap-3">
+        @for (slot of logoSlots; track slot.key) {
+          <label class="flex items-center gap-3">
+            <span [class]="uploadButtonClass">
+              <ng-icon name="lucideUpload" />
+              {{ slot.label }}
+            </span>
+            <span class="text-muted-foreground truncate text-xs">{{ fileNames()[slot.key] || slot.hint }}</span>
+            <input type="file" accept="image/svg+xml,image/png,image/webp,image/jpeg" class="sr-only" (change)="onLogo(slot.key, $event)" />
+          </label>
+        }
+
+        @if (extracted().length) {
+          <div hlmSeparator></div>
+          <p class="text-muted-foreground text-xs">Colours in the logo (gradient stops are faded):</p>
+          <div class="flex flex-wrap gap-2">
+            @for (color of extracted(); track color.hex) {
+              <div class="grid justify-items-center gap-1">
+                <span
+                  class="size-8 rounded-md border"
+                  [class.opacity-60]="color.source === 'gradient'"
+                  [style.background]="color.hex"
+                  [title]="color.hex"
+                ></span>
+                <div class="flex gap-0.5">
+                  <button hlmBtn variant="ghost" size="xs" title="Use as primary" (click)="setColor('primary', color.hex)">P</button>
+                  <button hlmBtn variant="ghost" size="xs" title="Use as secondary" (click)="setColor('secondary', color.hex)">S</button>
+                </div>
+              </div>
+            }
+          </div>
+          @if (suggestion(); as s) {
+            <button hlmBtn variant="secondary" size="sm" (click)="setColor('primary', s.primary); setColor('secondary', s.secondary)">
+              <ng-icon name="lucideSparkles" />
+              Use suggested pair ({{ s.primary }} / {{ s.secondary }})
+            </button>
+          }
+        }
+
+        <div hlmSeparator></div>
+        <p class="text-muted-foreground text-xs">Tools</p>
+        <div class="flex flex-wrap gap-2">
+          <button hlmBtn variant="outline" size="sm" [disabled]="logoBusy()" (click)="makeDarkLogo()">
+            <ng-icon name="lucideMoon" />
+            Make dark version
+          </button>
+          <button hlmBtn variant="outline" size="sm" [disabled]="logoBusy()" (click)="makeFavicons()">
+            <ng-icon name="lucideSparkles" />
+            Favicons
+          </button>
+        </div>
+
+        @if (darkVariant(); as dark) {
+          <div class="grid gap-2 rounded-md border p-2">
+            <div class="dark bg-background flex h-14 items-center justify-center rounded">
+              <img [src]="dark.url" alt="Dark version of the logo" class="h-8 w-auto" />
+            </div>
+            <div class="flex items-center justify-between gap-2 text-xs">
+              <span class="text-muted-foreground">
+                {{ dark.changed ? dark.changed + ' colour(s) lightened. Now used in dark mode.' : 'Nothing needed changing.' }}
+              </span>
+              <button hlmBtn variant="ghost" size="xs" (click)="downloadDarkLogo()">
+                <ng-icon name="lucideDownload" />
+                SVG
+              </button>
+            </div>
+          </div>
+        }
+
+        @if (favicons().length) {
+          <div class="flex flex-wrap items-end gap-3 rounded-md border p-2">
+            @for (icon of favicons(); track icon.size) {
+              <button type="button" class="grid justify-items-center gap-1 text-[10px]" [title]="'Download ' + icon.size + 'px'" (click)="downloadIcon(icon)">
+                <img [src]="icon.url" [alt]="icon.size + 'px icon'" [style.width.px]="icon.size > 48 ? 48 : icon.size" [style.height.px]="icon.size > 48 ? 48 : icon.size" />
+                <span class="text-muted-foreground">{{ icon.size }}</span>
+              </button>
+            }
+            <span class="text-muted-foreground w-full text-[10px]">Click an icon to download. 180 = Apple touch icon, 192/512 = web app.</span>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- Colours, type, shape -->
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>Colours &amp; type</h2>
+        <p hlmCardDescription>Everything else is derived from these.</p>
+      </div>
+      <div hlmCardContent class="grid gap-4">
+        @for (field of colorFields; track field.key) {
+          <div class="grid gap-1.5">
+            <label hlmLabel [for]="field.key">{{ field.label }}</label>
+            <div class="flex items-center gap-2">
+              <input
+                type="color"
+                class="border-input size-8 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5"
+                [value]="theme.brand().colors[field.key]"
+                (input)="setColor(field.key, $any($event.target).value)"
+                [attr.aria-label]="field.label + ' picker'"
+              />
+              <input
+                hlmInput
+                [id]="field.key"
+                class="font-mono"
+                [value]="theme.brand().colors[field.key]"
+                (change)="setColor(field.key, $any($event.target).value)"
+              />
+            </div>
+            <p class="text-muted-foreground text-xs">{{ field.hint }}</p>
+          </div>
+        }
+
+        <div class="grid gap-1.5">
+          <label hlmLabel for="font">Font</label>
+          <select hlmInput id="font" class="h-8" [value]="theme.brand().font ?? 'system'" (change)="setFont($any($event.target).value)">
+            @for (font of fonts; track font.id) {
+              <option [value]="font.id">{{ font.label }}</option>
+            }
+          </select>
+          <p class="text-muted-foreground text-xs">Loaded from Google Fonts. "System" downloads nothing.</p>
+        </div>
+
+        <div class="grid gap-1.5">
+          <label hlmLabel for="radius">Corner radius ({{ theme.brand().radius }}rem)</label>
+          <input
+            id="radius"
+            type="range"
+            min="0"
+            max="1.25"
+            step="0.125"
+            class="accent-primary"
+            [value]="theme.brand().radius"
+            (input)="theme.previewBrand({ radius: +$any($event.target).value })"
+          />
+        </div>
+
+        <label class="flex items-center gap-2 text-sm">
+          <hlm-switch
+            [checked]="theme.brand().sidebar === 'primary'"
+            (checkedChange)="theme.previewBrand({ sidebar: $event ? 'primary' : 'neutral' })"
+          />
+          Sidebar uses the primary colour
+        </label>
+
+        <div hlmSeparator></div>
+
+        <div class="grid gap-2">
+          <span hlmLabel>Status colours</span>
+          @for (field of statusFields; track field.key) {
+            <div class="flex items-center gap-2 text-sm">
+              <input
+                type="color"
+                class="border-input size-7 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5"
+                [value]="statusValue(field.key)"
+                (input)="setStatus(field.key, $any($event.target).value)"
+                [attr.aria-label]="field.label + ' colour'"
+              />
+              <span class="flex-1">{{ field.label }}</span>
+              @if (hasStatus(field.key)) {
+                <button hlmBtn variant="ghost" size="xs" (click)="setStatus(field.key, null)">Default</button>
+              } @else {
+                <span class="text-muted-foreground text-xs">Default</span>
+              }
+            </div>
+          }
+          @if (statusClash(); as clash) {
+            <p class="text-warning text-xs">{{ clash }}</p>
+          }
+        </div>
+
+        @if (error()) {
+          <p class="text-destructive text-xs" role="alert">{{ error() }}</p>
+        }
+
+        <div hlmSeparator></div>
+
+        <div class="flex flex-wrap gap-2">
+          <button hlmBtn variant="outline" size="sm" (click)="view.set('export')">
+            <ng-icon name="lucideCopy" />
+            Export…
+          </button>
+          <button hlmBtn variant="ghost" size="sm" (click)="reset()">
+            <ng-icon name="lucideRotateCcw" />
+            Reset to config
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ================= Preview ================= -->
+  <div class="grid h-fit min-w-0 gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="bg-muted flex flex-wrap gap-1 rounded-lg p-1" role="tablist" aria-label="View">
+        @for (v of views; track v.id) {
+          <button
+            hlmBtn
+            size="sm"
+            role="tab"
+            [variant]="view() === v.id ? 'outline' : 'ghost'"
+            [class.bg-background]="view() === v.id"
+            [attr.aria-selected]="view() === v.id"
+            (click)="view.set(v.id)"
+          >
+            {{ v.label }}
+          </button>
+        }
+      </div>
+
+      @if (visualView()) {
+        <span class="ms-auto flex flex-wrap items-center gap-3">
+          <label class="flex items-center gap-2 text-xs">
+            <ng-icon name="lucideEye" class="text-muted-foreground" />
+            <select hlmInput class="h-7 w-auto text-xs" aria-label="Simulate colour vision" [value]="cvd()" (change)="cvd.set($any($event.target).value)">
+              @for (mode of cvdModes; track mode.id) {
+                <option [value]="mode.id">{{ mode.label }}</option>
+              }
+            </select>
+          </label>
+          <label class="flex items-center gap-2 text-xs">
+            <hlm-switch [checked]="compare()" (checkedChange)="setCompare($event)" />
+            <ng-icon name="lucideColumns2" class="text-muted-foreground" />
+            Light &amp; dark
+          </label>
+        </span>
+      }
+    </div>
+
+    @switch (view()) {
+      @case ('components') {
+        <ng-container *ngTemplateOutlet="visual; context: { $implicit: components }" />
+      }
+      @case ('screens') {
+        <ng-container *ngTemplateOutlet="visual; context: { $implicit: screens }" />
+      }
+      @case ('scales') {
+        <section hlmCard><div hlmCardContent class="pt-6"><app-scales-panel /></div></section>
+      }
+      @case ('contrast') {
+        <section hlmCard><div hlmCardContent class="pt-6"><app-contrast-panel /></div></section>
+      }
+      @case ('export') {
+        <section hlmCard><div hlmCardContent class="pt-6"><app-export-panel /></div></section>
+      }
+    }
+  </div>
+</main>
+
+<!-- A visual view, once or side by side, with the colour-vision filter. -->
+<ng-template #visual let-content>
+  <div [style.filter]="cvdFilter()">
+    @if (compare()) {
+      <div class="grid gap-4 2xl:grid-cols-2">
+        <div class="light bg-background text-foreground grid gap-2 rounded-xl border p-3">
+          <span class="text-muted-foreground text-xs font-medium">Light</span>
+          <ng-container *ngTemplateOutlet="content" />
+        </div>
+        <div class="dark bg-background text-foreground grid gap-2 rounded-xl border p-3">
+          <span class="text-muted-foreground text-xs font-medium">Dark</span>
+          <ng-container *ngTemplateOutlet="content" />
+        </div>
+      </div>
+    } @else {
+      <ng-container *ngTemplateOutlet="content" />
+    }
+  </div>
+</ng-template>
+
+<ng-template #screens>
+  <app-screens-panel />
+</ng-template>
+
+<ng-template #components>
+  <div class="grid gap-6">
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>Logos</h2>
+        <p hlmCardDescription>Primary (full) and secondary (mark), on the page and on the sidebar.</p>
+      </div>
+      <div hlmCardContent class="flex flex-wrap items-center gap-8">
+        <app-brand-logo class="h-10" />
+        <app-brand-logo variant="secondary" class="h-10" />
+        <div class="bg-sidebar text-sidebar-foreground flex items-center gap-2 rounded-lg border p-2">
+          <app-brand-logo variant="secondary" surface="sidebar" class="h-6" />
+          <span class="text-sm font-medium">{{ theme.brand().shortName ?? theme.brand().name }}</span>
+        </div>
+      </div>
+    </section>
+
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>Buttons and badges</h2>
+      </div>
+      <div hlmCardContent class="grid gap-4">
+        <div class="flex flex-wrap gap-2">
+          <button hlmBtn>Primary</button>
+          <button hlmBtn variant="secondary">Secondary</button>
+          <button hlmBtn variant="outline">Outline</button>
+          <button hlmBtn variant="ghost">Ghost</button>
+          <button hlmBtn variant="destructive">Destructive</button>
+          <button hlmBtn variant="link">Link</button>
+          <button hlmBtn disabled>Disabled</button>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <span hlmBadge>Default</span>
+          <span hlmBadge variant="secondary">Secondary</span>
+          <span hlmBadge variant="outline">Outline</span>
+          <span hlmBadge variant="destructive">Failed</span>
+          <span hlmBadge class="bg-success/15 text-success">Sent</span>
+          <span hlmBadge class="bg-warning/15 text-warning">Queued</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid gap-6 md:grid-cols-2">
+      <section hlmCard>
+        <div hlmCardHeader>
+          <h2 hlmCardTitle>Sign in</h2>
+          <p hlmCardDescription>Form controls and focus ring (tab into the fields).</p>
+        </div>
+        <div hlmCardContent class="grid gap-3">
+          <div class="grid gap-1.5">
+            <label hlmLabel>Email</label>
+            <input hlmInput type="email" placeholder="jane@company.com" aria-label="Email (sample)" />
+          </div>
+          <div class="grid gap-1.5">
+            <label hlmLabel>Password</label>
+            <input hlmInput type="password" placeholder="••••••••••••" aria-label="Password (sample)" />
+          </div>
+          <label class="flex items-center gap-2 text-sm">
+            <hlm-switch [checked]="true" />
+            Remember this device
+          </label>
+        </div>
+        <div hlmCardFooter>
+          <button hlmBtn class="w-full">Sign in</button>
+        </div>
+      </section>
+
+      <section hlmCard>
+        <div hlmCardHeader>
+          <h2 hlmCardTitle>Sidebar</h2>
+          <p hlmCardDescription>Active and hover states.</p>
+        </div>
+        <div hlmCardContent>
+          <nav class="bg-sidebar text-sidebar-foreground grid gap-1 rounded-lg border p-2 text-sm">
+            <a class="bg-sidebar-accent text-sidebar-accent-foreground flex items-center gap-2 rounded-md px-2 py-1.5 font-medium">
+              <ng-icon name="lucideMail" /> Requests
+            </a>
+            <a class="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5">
+              <ng-icon name="lucideSearch" /> Companies
+            </a>
+            <a class="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5">
+              <ng-icon name="lucideUsers" /> Users
+            </a>
+          </nav>
+        </div>
+      </section>
+    </div>
+
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>Colour tokens</h2>
+      </div>
+      <div hlmCardContent class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        @for (swatch of swatches; track swatch.name) {
+          <div class="overflow-hidden rounded-md border text-xs">
+            <div [class]="swatch.bg"></div>
+            <div class="px-2 py-1 font-mono">{{ swatch.name }}</div>
+          </div>
+        }
+      </div>
+    </section>
+  </div>
+</ng-template>

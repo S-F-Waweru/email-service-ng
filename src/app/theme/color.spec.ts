@@ -1,5 +1,7 @@
 import {
   buildBrandTokens,
+  buildScale,
+  parseOklch,
   contrastRatio,
   extractSvgColors,
   hexToOklch,
@@ -69,5 +71,31 @@ describe('extractSvgColors / suggestBrandColors', () => {
 
   it('returns null for a monochrome logo', () => {
     expect(suggestBrandColors(extractSvgColors('<svg fill="#000"><path fill="#ffffff"/></svg>'))).toBeNull();
+  });
+});
+
+describe('buildScale / parseOklch / status tokens', () => {
+  it('builds an 11-step scale from light to dark with the same hue', () => {
+    const scale = buildScale('#9a205b');
+    expect(scale.map((s) => s.step)).toEqual([50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]);
+    for (let i = 1; i < scale.length; i++) expect(scale[i].oklch.l).toBeLessThan(scale[i - 1].oklch.l);
+    expect(new Set(scale.map((s) => Math.round(s.oklch.h)))).toEqual(new Set([Math.round(hexToOklch('#9a205b').h)]));
+  });
+
+  it('makes a near-grey scale when chroma is forced low', () => {
+    expect(buildScale('#9a205b', 0.012).every((s) => s.oklch.c <= 0.012)).toBe(true);
+  });
+
+  it('parses oklch() values, with % lightness and alpha', () => {
+    expect(parseOklch('oklch(0.5 0.1 200)')).toEqual({ l: 0.5, c: 0.1, h: 200 });
+    expect(parseOklch('oklch(50% 0.1 200 / 40%)')).toEqual({ l: 0.5, c: 0.1, h: 200 });
+    expect(parseOklch('#fff')).toBeNull();
+  });
+
+  it('adds status colour tokens only for overridden statuses', () => {
+    const { light, dark } = buildBrandTokens('#9a205b', '#f5b61b', 'neutral', { warning: '#ea580c' });
+    expect(light['--warning']).toBeDefined();
+    expect(dark['--warning']).toBeDefined();
+    expect(light['--success']).toBeUndefined();
   });
 });
