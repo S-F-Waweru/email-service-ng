@@ -1,10 +1,11 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { ApiService } from '../../core/api/api.service';
 import { ApiError } from '../../core/api/api-error';
+import { AuthStore } from '../../core/auth/auth.store';
 import { CompanyStore } from '../../core/company/company.store';
 import { Notify } from '../../core/notify/notify.service';
 import { isEmail } from '../../shared/forms/validators';
-import { type CcChange, type CompanySite, MAX_CC } from './companies.models';
+import { type CcChange, type CompanySettingsInput, type CompanySite, MAX_CC } from './companies.models';
 
 /**
  * Companies page state: the user's companies and an unsaved CC draft per
@@ -15,6 +16,7 @@ export class CompaniesStore {
   private readonly api = inject(ApiService);
   private readonly notify = inject(Notify);
   private readonly company = inject(CompanyStore);
+  private readonly auth = inject(AuthStore);
 
   private readonly _sites = signal<CompanySite[]>([]);
   private readonly _loading = signal(false);
@@ -104,6 +106,26 @@ export class CompaniesStore {
       return true;
     } catch {
       return false; // toast shown by ApiService; the draft is kept so nothing is lost
+    } finally {
+      this._saving.set(null);
+    }
+  }
+
+  /** Name and sender. Returns false on failure (toast shown, caller keeps the form open). */
+  async updateSettings(siteId: string, input: CompanySettingsInput): Promise<boolean> {
+    if (this._saving()) return false;
+    this._saving.set(siteId);
+    try {
+      const updated = await this.api.patch<CompanySite>(`/sites/${encodeURIComponent(siteId)}`, input, {
+        toast: 'Could not save company details',
+      });
+      this._sites.update((sites) => sites.map((s) => (s.id === siteId ? updated : s)));
+      this.notify.success('Company details saved', updated.name);
+      // The switcher and breadcrumb show the name.
+      if (input.name !== undefined) await this.auth.refreshProfile().catch(() => undefined);
+      return true;
+    } catch {
+      return false;
     } finally {
       this._saving.set(null);
     }

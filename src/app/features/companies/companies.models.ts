@@ -6,6 +6,17 @@ export interface CompanySite {
   recipient: string;
   cc: string[];
   isActive: boolean;
+  /** Sender shown on contact emails; null = the service's default sender. */
+  from: string | null;
+  /** Sends through its own mail server, so a sender is required. */
+  hasOwnSmtp: boolean;
+}
+
+/** PATCH /sites/:id. Only name and sender are editable by company users. */
+export interface CompanySettingsInput {
+  name?: string;
+  /** null clears it back to the default sender. */
+  from?: string | null;
 }
 
 /** Backend MAX_CC_RECIPIENTS. */

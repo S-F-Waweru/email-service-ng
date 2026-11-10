@@ -34,7 +34,6 @@ interface ShownKey {
   selector: 'app-admin-sites-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
     NgIcon,
     HlmAlertDialogImports,
     HlmBadge,

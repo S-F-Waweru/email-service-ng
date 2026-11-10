@@ -12,3 +12,9 @@ export const emailValidator: ValidatorFn = Validators.pattern(EMAIL_PATTERN);
 export function isEmail(value: string): boolean {
   return value.length <= 254 && EMAIL_PATTERN.test(value);
 }
+
+/** "no-reply@acme.com" or "Acme Ltd <no-reply@acme.com>", like the backend's sender rule. */
+export function isSender(value: string): boolean {
+  const match = /<([^<>]+)>\s*$/.exec(value);
+  return isEmail((match ? match[1] : value).trim());
+}

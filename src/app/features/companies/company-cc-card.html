@@ -15,6 +15,74 @@
   </div>
 
   <div hlmCardContent class="grid gap-5">
+    <!-- Name and sender (editable by company users) -->
+    @if (editingDetails()) {
+      <form class="grid gap-3 rounded-md border p-3" (submit)="$event.preventDefault(); saveDetails()">
+        <div class="grid gap-1.5">
+          <label hlmLabel [for]="inputId() + '-name'">Company name</label>
+          <input
+            hlmInput
+            [id]="inputId() + '-name'"
+            [value]="nameDraft()"
+            (input)="nameDraft.set($any($event.target).value)"
+            [attr.aria-invalid]="detailsTouched() && nameError() ? true : null"
+            maxlength="150"
+          />
+          @if (detailsTouched() && nameError()) {
+            <p class="text-destructive text-xs">{{ nameError() }}</p>
+          } @else {
+            <p class="text-muted-foreground text-xs">Shown in the dashboard and in contact emails.</p>
+          }
+        </div>
+        <div class="grid gap-1.5">
+          <label hlmLabel [for]="inputId() + '-from'">Sender</label>
+          <input
+            hlmInput
+            [id]="inputId() + '-from'"
+            [value]="fromDraft()"
+            (input)="fromDraft.set($any($event.target).value)"
+            [placeholder]="site().hasOwnSmtp ? 'Acme <no-reply@acme.com>' : 'Default sender'"
+            [attr.aria-invalid]="detailsTouched() && fromError() ? true : null"
+            maxlength="320"
+          />
+          @if (detailsTouched() && fromError()) {
+            <p class="text-destructive text-xs">{{ fromError() }}</p>
+          } @else {
+            <p class="text-muted-foreground text-xs">
+              {{ site().hasOwnSmtp ? 'Must be an address your mail server is allowed to send from.' : 'Optional. Leave empty to use the default sender.' }}
+            </p>
+          }
+        </div>
+        <div class="flex justify-end gap-2">
+          <button hlmBtn type="button" variant="ghost" size="sm" [disabled]="saving()" (click)="cancelDetails()">Cancel</button>
+          <button hlmBtn type="submit" size="sm" [disabled]="saving()">
+            @if (saving()) {
+              <hlm-spinner class="size-4" />
+            }
+            Save details
+          </button>
+        </div>
+      </form>
+    } @else {
+      <div class="grid gap-1.5">
+        <div class="flex items-center justify-between">
+          <span hlmLabel>Sender</span>
+          <button hlmBtn variant="ghost" size="xs" (click)="editDetails()" [disabled]="saving()">
+            <ng-icon name="lucidePencil" />
+            Edit name &amp; sender
+          </button>
+        </div>
+        <div class="bg-muted/50 flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+          <ng-icon name="lucideSend" class="text-muted-foreground" />
+          @if (site().from) {
+            <span class="truncate">{{ site().from }}</span>
+          } @else {
+            <span class="text-muted-foreground">Default sender</span>
+          }
+        </div>
+      </div>
+    }
+
     <!-- Recipient -->
     <div class="grid gap-1.5">
       <span hlmLabel>Recipient</span>
@@ -22,7 +90,7 @@
         <ng-icon name="lucideMail" class="text-muted-foreground" />
         <span class="truncate">{{ site().recipient }}</span>
       </div>
-      <p class="text-muted-foreground text-xs">Every contact email goes here. Ask an administrator to change it.</p>
+      <p class="text-muted-foreground text-xs">Every contact email goes here. Only an administrator can change it.</p>
     </div>
 
     <!-- CC list -->
