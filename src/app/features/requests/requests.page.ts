@@ -9,9 +9,6 @@ import { PageHeader } from '../../shared/page-header';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [PageHeader, ComingSoon],
   providers: [provideIcons({ lucideInbox })],
-  template: `
-    <app-page-header title="Requests" description="Contact form submissions and how their emails were delivered." />
-    <app-coming-soon icon="lucideInbox" text="Searchable list with status filters, paging and a delivery detail panel." />
-  `,
+  templateUrl: './requests.page.html',
 })
 export class RequestsPage {}

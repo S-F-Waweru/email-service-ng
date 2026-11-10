@@ -9,9 +9,6 @@ import { PageHeader } from '../../shared/page-header';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [PageHeader, ComingSoon],
   providers: [provideIcons({ lucideGlobe })],
-  template: `
-    <app-page-header title="Sites" description="Websites that can submit contact forms, their API keys and mail settings." />
-    <app-coming-soon icon="lucideGlobe" text="Create and edit sites, reveal or rotate API keys, per-site SMTP." />
-  `,
+  templateUrl: './sites.page.html',
 })
 export class AdminSitesPage {}

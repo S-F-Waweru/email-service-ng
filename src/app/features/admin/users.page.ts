@@ -9,9 +9,6 @@ import { PageHeader } from '../../shared/page-header';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [PageHeader, ComingSoon],
   providers: [provideIcons({ lucideUsers })],
-  template: `
-    <app-page-header title="Users" description="Who can sign in to the dashboard and which companies they see." />
-    <app-coming-soon icon="lucideUsers" text="Create and edit users, assign companies, reset passwords." />
-  `,
+  templateUrl: './users.page.html',
 })
 export class AdminUsersPage {}

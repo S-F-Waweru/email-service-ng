@@ -1,0 +1,73 @@
+<div class="bg-muted/40 relative grid min-h-svh place-items-center px-4 py-10">
+  <app-theme-toggle class="absolute end-4 top-4" />
+
+  <div class="grid w-full max-w-sm gap-6">
+    <app-brand-logo class="h-10 justify-self-center" />
+
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h1 hlmCardTitle class="text-base">Sign in</h1>
+        <p hlmCardDescription>to {{ theme.brand().name }}</p>
+      </div>
+
+      <form hlmCardContent class="grid gap-4" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="grid gap-1.5">
+          <label hlmLabel for="email">Email</label>
+          <input
+            hlmInput
+            id="email"
+            type="email"
+            autocomplete="username"
+            formControlName="email"
+            placeholder="you@company.com"
+            [attr.aria-invalid]="fieldError('email') ? true : null"
+            aria-describedby="email-error"
+          />
+          @if (fieldError('email'); as message) {
+            <p id="email-error" class="text-destructive text-xs">{{ message }}</p>
+          }
+        </div>
+
+        <div class="grid gap-1.5">
+          <label hlmLabel for="password">Password</label>
+          <div hlmInputGroup>
+            <input
+              hlmInputGroupInput
+              id="password"
+              [type]="showPassword() ? 'text' : 'password'"
+              autocomplete="current-password"
+              formControlName="password"
+              [attr.aria-invalid]="fieldError('password') ? true : null"
+              aria-describedby="password-error"
+            />
+            <div hlmInputGroupAddon align="inline-end">
+              <button
+                hlmInputGroupButton
+                type="button"
+                size="icon-xs"
+                (click)="showPassword.set(!showPassword())"
+                [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+              >
+                <ng-icon [name]="showPassword() ? 'lucideEyeOff' : 'lucideEye'" />
+              </button>
+            </div>
+          </div>
+          @if (fieldError('password'); as message) {
+            <p id="password-error" class="text-destructive text-xs">{{ message }}</p>
+          }
+        </div>
+
+        <button hlmBtn type="submit" size="lg" class="w-full" [disabled]="auth.loggingIn()">
+          @if (auth.loggingIn()) {
+            <hlm-spinner class="size-4" />
+          }
+          Sign in
+        </button>
+      </form>
+    </section>
+
+    <p class="text-muted-foreground text-center text-xs">
+      Forgot your password? Ask your administrator to reset it.
+    </p>
+  </div>
+</div>

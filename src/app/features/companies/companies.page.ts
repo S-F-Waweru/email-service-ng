@@ -9,9 +9,6 @@ import { PageHeader } from '../../shared/page-header';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [PageHeader, ComingSoon],
   providers: [provideIcons({ lucideBuilding2 })],
-  template: `
-    <app-page-header title="Companies" description="Where each company's contact emails go, and who is CC'd." />
-    <app-coming-soon icon="lucideBuilding2" text="Recipient and CC list editor for each of your companies." />
-  `,
+  templateUrl: './companies.page.html',
 })
 export class CompaniesPage {}

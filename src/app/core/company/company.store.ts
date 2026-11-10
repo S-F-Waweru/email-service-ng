@@ -1,20 +1,20 @@
 import { computed, inject, Injectable, linkedSignal } from '@angular/core';
-import { AuthService } from '../auth/auth.service';
 import type { SiteRef } from '../auth/auth.models';
+import { AuthStore } from '../auth/auth.store';
 
 const KEY = 'selected-company';
 
 /**
- * Which company the dashboard is showing. `null` means all of the user's
- * companies. Pages read `siteId()` and pass it to the API as `?siteId=`.
+ * Which company the dashboard shows. `siteId()` null = all of the user's
+ * companies. Feature stores pass it to the API as `?siteId=`.
  */
 @Injectable({ providedIn: 'root' })
-export class CompanyContext {
-  private readonly auth = inject(AuthService);
+export class CompanyStore {
+  private readonly auth = inject(AuthStore);
 
   readonly sites = computed<SiteRef[]>(() => this.auth.user()?.sites ?? []);
 
-  /** Resets automatically if the stored company is no longer one of the user's. */
+  /** Resets if the remembered company is no longer one of the user's. */
   readonly siteId = linkedSignal<SiteRef[], string | null>({
     source: this.sites,
     computation: (sites, previous) => {
@@ -25,6 +25,7 @@ export class CompanyContext {
   });
 
   readonly selected = computed(() => this.sites().find((s) => s.id === this.siteId()) ?? null);
+  readonly label = computed(() => this.selected()?.name ?? 'All companies');
   readonly canSwitch = computed(() => this.sites().length > 1);
 
   select(siteId: string | null): void {

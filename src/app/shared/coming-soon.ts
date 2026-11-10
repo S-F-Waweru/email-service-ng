@@ -7,15 +7,7 @@ import { HlmEmptyImports } from '@spartan-ng/helm/empty';
   selector: 'app-coming-soon',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [NgIcon, HlmEmptyImports],
-  template: `
-    <div hlmEmpty class="rounded-lg border border-dashed">
-      <div hlmEmptyHeader>
-        <div hlmEmptyMedia variant="icon"><ng-icon [name]="icon()" /></div>
-        <div hlmEmptyTitle>{{ heading() }}</div>
-        <div hlmEmptyDescription>{{ text() }}</div>
-      </div>
-    </div>
-  `,
+  templateUrl: './coming-soon.html',
 })
 export class ComingSoon {
   readonly icon = input.required<string>();

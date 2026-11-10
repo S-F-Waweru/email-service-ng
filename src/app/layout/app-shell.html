@@ -1,0 +1,59 @@
+<div hlmSidebarWrapper>
+  <hlm-sidebar collapsible="icon">
+    <div hlmSidebarHeader class="gap-3">
+      <a routerLink="/" class="flex h-10 items-center px-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+        <app-brand-logo class="h-7 group-data-[collapsible=icon]:hidden" />
+        <app-brand-logo variant="secondary" class="hidden h-7 group-data-[collapsible=icon]:inline-flex" />
+      </a>
+      <app-company-switcher />
+    </div>
+
+    <div hlmSidebarContent>
+      @for (group of nav(); track group.label) {
+        <div hlmSidebarGroup>
+          <div hlmSidebarGroupLabel>{{ group.label }}</div>
+          <div hlmSidebarGroupContent>
+            <ul hlmSidebarMenu>
+              @for (item of group.items; track item.path) {
+                <li hlmSidebarMenuItem>
+                  <a
+                    hlmSidebarMenuButton
+                    [routerLink]="item.path"
+                    routerLinkActive
+                    #rla="routerLinkActive"
+                    [isActive]="rla.isActive"
+                    [tooltip]="item.label"
+                  >
+                    <ng-icon [name]="item.icon" />
+                    <span>{{ item.label }}</span>
+                  </a>
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div hlmSidebarFooter>
+      <app-user-menu />
+    </div>
+  </hlm-sidebar>
+
+  <main hlmSidebarInset>
+    <header class="bg-background/80 sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b px-4 backdrop-blur">
+      <button hlmSidebarTrigger class="-ms-1"></button>
+      <div hlmSeparator orientation="vertical" class="me-1 h-4"></div>
+      <nav aria-label="Breadcrumb" class="flex min-w-0 items-center gap-1.5 text-sm">
+        <span class="text-muted-foreground truncate">{{ company.label() }}</span>
+        <span class="text-muted-foreground/50">/</span>
+        <span class="truncate font-medium">{{ titles.pageTitle() }}</span>
+      </nav>
+      <app-theme-toggle class="ms-auto" />
+    </header>
+
+    <div class="mx-auto w-full max-w-7xl flex-1 p-4 md:p-6">
+      <router-outlet />
+    </div>
+  </main>
+</div>
