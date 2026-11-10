@@ -10,6 +10,7 @@ import { HlmSkeleton } from '@spartan-ng/helm/skeleton';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import { PageHeader } from '../../shared/page-header';
 import { mediaQuery } from '../../shared/media-query';
+import { DateFilterControl } from './date-filter';
 import { RequestReadingPane } from './request-reading-pane';
 import { RequestSheet } from './request-sheet';
 import { REQUEST_STATUSES, type RequestStatus } from './requests.models';
@@ -37,6 +38,7 @@ const STATUS_LABELS: Record<RequestStatus, string> = {
     HlmSkeleton,
     HlmTableImports,
     PageHeader,
+    DateFilterControl,
     RequestReadingPane,
     RequestSheet,
     StatusBadge,

@@ -29,6 +29,8 @@
     }
   </div>
 
+  <app-date-filter />
+
   <div class="flex flex-wrap gap-1" role="group" aria-label="Filter by status">
     @for (option of statusOptions; track option.label) {
       <button
@@ -127,7 +129,7 @@
         </div>
         <div hlmEmptyTitle>{{ store.hasFilters() ? 'No matching requests' : 'No requests yet' }}</div>
         <div hlmEmptyDescription>
-          {{ store.hasFilters() ? 'Try a different search or status.' : 'Submissions from your websites will appear here.' }}
+          {{ store.hasFilters() ? 'Try a different search, status or date range.' : 'Submissions from your websites will appear here.' }}
         </div>
       </div>
       @if (store.hasFilters()) {

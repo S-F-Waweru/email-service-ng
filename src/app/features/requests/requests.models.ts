@@ -1,3 +1,5 @@
+import type { DateFilter } from './date-ranges';
+
 export const REQUEST_STATUSES = ['pending', 'queued', 'sent', 'failed', 'cancelled'] as const;
 export type RequestStatus = (typeof REQUEST_STATUSES)[number];
 
@@ -38,6 +40,8 @@ export interface RequestPage {
 
 export interface RequestFilters {
   status: RequestStatus | null;
+  /** Received date; null = any time. */
+  date: DateFilter | null;
   q: string;
   page: number;
   limit: number;

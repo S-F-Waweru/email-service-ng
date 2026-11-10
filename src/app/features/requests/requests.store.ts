@@ -3,6 +3,7 @@ import { ApiService } from '../../core/api/api.service';
 import { ApiError } from '../../core/api/api-error';
 import { CompanyStore } from '../../core/company/company.store';
 import { Notify } from '../../core/notify/notify.service';
+import { type DateFilter, resolveRange } from './date-ranges';
 import type { ContactRequest, RequestFilters, RequestPage, RequestStatus } from './requests.models';
 
 const SEARCH_DEBOUNCE_MS = 350;
@@ -17,7 +18,7 @@ export class RequestsStore {
   private readonly company = inject(CompanyStore);
   private readonly notify = inject(Notify);
 
-  private readonly _filters = signal<RequestFilters>({ status: null, q: '', page: 1, limit: 20 });
+  private readonly _filters = signal<RequestFilters>({ status: null, date: null, q: '', page: 1, limit: 20 });
   private readonly _page = signal<RequestPage | null>(null);
   private readonly _loading = signal(false);
   private readonly _error = signal<ApiError | null>(null);
@@ -32,7 +33,10 @@ export class RequestsStore {
   readonly items = computed(() => this._page()?.items ?? []);
   readonly total = computed(() => this._page()?.total ?? 0);
   readonly isEmpty = computed(() => !this._loading() && !this._error() && this.items().length === 0);
-  readonly hasFilters = computed(() => this._filters().status !== null || this._filters().q !== '');
+  readonly hasFilters = computed(() => {
+    const f = this._filters();
+    return f.status !== null || f.date !== null || f.q !== '';
+  });
   /** Show the company column only when several companies are listed. */
   readonly showCompany = computed(() => this.company.siteId() === null && this.company.sites().length > 1);
   readonly selectedId = this._selectedId.asReadonly();
@@ -61,6 +65,10 @@ export class RequestsStore {
     this._filters.update((f) => ({ ...f, status, page: 1 }));
   }
 
+  setDate(date: DateFilter | null): void {
+    this._filters.update((f) => ({ ...f, date, page: 1 }));
+  }
+
   setSearch(text: string): void {
     this.searchText.set(text);
     clearTimeout(this.searchTimer);
@@ -81,7 +89,7 @@ export class RequestsStore {
   clearFilters(): void {
     clearTimeout(this.searchTimer);
     this.searchText.set('');
-    this._filters.update((f) => ({ ...f, status: null, q: '', page: 1 }));
+    this._filters.update((f) => ({ ...f, status: null, date: null, q: '', page: 1 }));
   }
 
   open(request: ContactRequest): void {
@@ -128,8 +136,18 @@ export class RequestsStore {
     this._loading.set(true);
     this._error.set(null);
     try {
+      // Worked out at load time, so "Today" stays today after midnight.
+      const range = filters.date ? resolveRange(filters.date) : null;
       const page = await this.api.get<RequestPage>('/requests', {
-        params: { siteId, status: filters.status, q: filters.q, page: filters.page, limit: filters.limit },
+        params: {
+          siteId,
+          status: filters.status,
+          q: filters.q,
+          from: range?.from.toISOString(),
+          to: range?.to?.toISOString(),
+          page: filters.page,
+          limit: filters.limit,
+        },
       });
       if (seq !== this.requestSeq) return;
       // A page past the end (e.g. after filtering): jump to the last page.

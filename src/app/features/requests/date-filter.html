@@ -1,0 +1,64 @@
+<div class="flex items-center">
+  <button
+    hlmBtn
+    size="sm"
+    [variant]="current() ? 'secondary' : 'outline'"
+    [class.rounded-e-none]="current()"
+    [hlmDropdownMenuTrigger]="menu"
+    align="start"
+    aria-label="Filter by received date"
+  >
+    <ng-icon name="lucideCalendar" />
+    {{ label() }}
+    <ng-icon name="lucideChevronDown" class="opacity-60" />
+  </button>
+  @if (current()) {
+    <button hlmBtn size="icon-sm" variant="secondary" class="rounded-s-none border-s border-s-black/10" aria-label="Clear date filter" (click)="clear()">
+      <ng-icon name="lucideX" />
+    </button>
+  }
+</div>
+
+@if (editingCustom()) {
+  <form class="bg-muted/40 flex flex-wrap items-center gap-2 rounded-md border p-1.5" (submit)="$event.preventDefault(); applyCustom()">
+    <label class="sr-only" for="date-from">From</label>
+    <input hlmInput id="date-from" type="date" class="h-7 w-36" [max]="end() || today" [value]="start()" (input)="start.set($any($event.target).value)" />
+    <span class="text-muted-foreground text-xs">to</span>
+    <label class="sr-only" for="date-to">To</label>
+    <input hlmInput id="date-to" type="date" class="h-7 w-36" [min]="start()" [max]="today" [value]="end()" (input)="end.set($any($event.target).value)" />
+    <button hlmBtn size="sm" type="submit" [disabled]="!!customError()" [attr.title]="customError()">Apply</button>
+    <button hlmBtn size="icon-sm" variant="ghost" type="button" aria-label="Cancel custom range" (click)="editingCustom.set(false)">
+      <ng-icon name="lucideX" />
+    </button>
+  </form>
+}
+
+<ng-template #menu>
+  <hlm-dropdown-menu class="w-48">
+    <button hlmDropdownMenuItem (triggered)="clear()">
+      Any time
+      @if (!current()) {
+        <ng-icon name="lucideCheck" class="ms-auto" />
+      }
+    </button>
+    @for (group of groups; track $index) {
+      <div hlmDropdownMenuSeparator></div>
+      @for (preset of group; track preset) {
+        <button hlmDropdownMenuItem (triggered)="choose(preset)">
+          {{ labels[preset] }}
+          @if (isCurrent(preset)) {
+            <ng-icon name="lucideCheck" class="ms-auto" />
+          }
+        </button>
+      }
+    }
+    <div hlmDropdownMenuSeparator></div>
+    <button hlmDropdownMenuItem (triggered)="openCustom()">
+      <ng-icon name="lucideCalendarRange" />
+      Custom range…
+      @if (current()?.preset === 'custom') {
+        <ng-icon name="lucideCheck" class="ms-auto" />
+      }
+    </button>
+  </hlm-dropdown-menu>
+</ng-template>
