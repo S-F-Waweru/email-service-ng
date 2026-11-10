@@ -1,4 +1,4 @@
-export const REQUEST_STATUSES = ['pending', 'queued', 'sent', 'failed'] as const;
+export const REQUEST_STATUSES = ['pending', 'queued', 'sent', 'failed', 'cancelled'] as const;
 export type RequestStatus = (typeof REQUEST_STATUSES)[number];
 
 /** GET /requests item and GET /requests/:id (backend RequestView). Dates are ISO strings. */
@@ -22,6 +22,8 @@ export interface ContactRequest {
     maxAttempts: number;
     /** Failed but will be retried automatically. */
     willRetry: boolean;
+    /** Not sent yet and more attempts may follow: POST /requests/:id/stop is allowed. */
+    canStop: boolean;
     lastAttemptAt: string | null;
     lastError: string | null;
   };

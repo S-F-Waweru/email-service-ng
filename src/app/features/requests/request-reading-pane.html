@@ -1,0 +1,153 @@
+@if (request(); as r) {
+  <article class="grid gap-5">
+    <!-- Header -->
+    <header class="grid gap-2">
+      <div class="flex items-start gap-2">
+        <div class="grid min-w-0 flex-1 gap-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <app-status-badge [request]="r" />
+            <span class="text-muted-foreground text-xs">{{ r.createdAt | date: 'EEE d MMM y, HH:mm' }}</span>
+          </div>
+          <h2 class="text-base leading-snug font-semibold break-words">{{ r.subject || 'No subject' }}</h2>
+          <p class="text-muted-foreground text-xs">via {{ r.siteName }}</p>
+        </div>
+        @if (showClose()) {
+          <button hlmBtn variant="ghost" size="icon-sm" aria-label="Close" (click)="store.close()">
+            <ng-icon name="lucideX" />
+          </button>
+        }
+      </div>
+    </header>
+
+    <!-- Sender -->
+    <section class="bg-muted/40 grid gap-2 rounded-lg p-3 text-xs">
+      <div class="flex items-center gap-3">
+        <span class="bg-primary text-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
+          {{ r.fullName.charAt(0).toUpperCase() }}
+        </span>
+        <div class="grid min-w-0">
+          <span class="truncate text-sm font-medium">{{ r.fullName }}</span>
+          @if (r.company) {
+            <span class="text-muted-foreground truncate">{{ r.company }}</span>
+          }
+        </div>
+      </div>
+      <dl class="grid grid-cols-[4.5rem_1fr] gap-x-3 gap-y-1">
+        <dt class="text-muted-foreground self-center">Email</dt>
+        <dd class="flex min-w-0 items-center gap-1">
+          <a class="text-primary truncate hover:underline" [href]="'mailto:' + r.email">{{ r.email }}</a>
+          <button hlmBtn variant="ghost" size="icon-xs" aria-label="Copy email" (click)="copy(r.email, 'Email')">
+            <ng-icon name="lucideCopy" />
+          </button>
+        </dd>
+        <dt class="text-muted-foreground self-center">Phone</dt>
+        <dd class="flex items-center gap-1">
+          <a class="hover:underline" [href]="'tel:' + r.phoneNumber">{{ r.phoneNumber }}</a>
+          <button hlmBtn variant="ghost" size="icon-xs" aria-label="Copy phone" (click)="copy(r.phoneNumber, 'Phone number')">
+            <ng-icon name="lucideCopy" />
+          </button>
+        </dd>
+      </dl>
+    </section>
+
+    <!-- Message -->
+    <section class="grid gap-3">
+      <p class="text-sm leading-relaxed whitespace-pre-wrap break-words">{{ r.message }}</p>
+      <div>
+        <a hlmBtn size="sm" [href]="replyHref()">
+          <ng-icon name="lucideReply" />
+          Reply by email
+        </a>
+      </div>
+    </section>
+
+    <div hlmSeparator></div>
+
+    <!-- Delivery -->
+    <section class="grid gap-3">
+      <div class="flex items-center justify-between gap-2">
+        <h3 class="text-sm font-medium">Delivery</h3>
+        @if (r.delivery.canStop) {
+          <button hlmBtn variant="destructive" size="sm" [disabled]="store.stopping()" (click)="confirmingStop.set(true)">
+            <ng-icon name="lucideCircleStop" />
+            Stop sending
+          </button>
+        }
+      </div>
+
+      <dl class="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-2 text-xs">
+        <dt class="text-muted-foreground">Sent to</dt>
+        <dd class="break-all">{{ r.delivery.deliveredTo ?? '—' }}</dd>
+
+        <dt class="text-muted-foreground">CC</dt>
+        <dd class="break-all">{{ r.delivery.cc.length ? r.delivery.cc.join(', ') : '—' }}</dd>
+
+        <dt class="text-muted-foreground">Sent at</dt>
+        <dd>{{ r.delivery.sentAt ? (r.delivery.sentAt | date: 'medium') : '—' }}</dd>
+
+        <dt class="text-muted-foreground">Attempts</dt>
+        <dd class="flex items-center gap-2">
+          {{ r.delivery.attempts }} of {{ r.delivery.maxAttempts }}
+          <span class="bg-muted h-1.5 w-24 overflow-hidden rounded-full">
+            <span
+              class="block h-full rounded-full"
+              [class]="r.status === 'sent' ? 'bg-success' : r.status === 'failed' ? 'bg-destructive' : 'bg-muted-foreground/40'"
+              [style.width.%]="(r.delivery.attempts / r.delivery.maxAttempts) * 100"
+            ></span>
+          </span>
+        </dd>
+
+        @if (r.delivery.lastAttemptAt) {
+          <dt class="text-muted-foreground">Last attempt</dt>
+          <dd>{{ r.delivery.lastAttemptAt | date: 'medium' }}</dd>
+        }
+      </dl>
+
+      @if (r.status === 'cancelled') {
+        <p class="bg-muted text-muted-foreground rounded-md p-3 text-xs">
+          Delivery was stopped from the dashboard. This email will not be sent.
+        </p>
+      }
+
+      @if (r.delivery.lastError) {
+        <div role="alert" class="bg-destructive/10 text-destructive grid gap-1 rounded-md p-3 text-xs">
+          <span class="flex items-center gap-1.5 font-medium">
+            <ng-icon name="lucideCircleAlert" />
+            {{ r.delivery.willRetry ? 'Last attempt failed — will retry automatically' : 'Last attempt failed' }}
+          </span>
+          <span class="font-mono break-words">{{ r.delivery.lastError }}</span>
+        </div>
+      }
+    </section>
+  </article>
+
+  <hlm-alert-dialog [state]="confirmingStop() ? 'open' : 'closed'" (stateChanged)="onStopDialog($event)">
+    <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
+      <hlm-alert-dialog-header>
+        <h2 hlmAlertDialogTitle>Stop sending this email?</h2>
+        <p hlmAlertDialogDescription>
+          {{ r.status === 'failed' ? 'It has failed ' + r.delivery.attempts + ' time(s) and would be retried.' : 'It hasn’t been sent yet.' }}
+          No more attempts will be made, and {{ r.delivery.deliveredTo ?? 'the company inbox' }} won’t receive it.
+          The request stays here so you can still read it and reply.
+        </p>
+      </hlm-alert-dialog-header>
+      <hlm-alert-dialog-footer>
+        <button hlmAlertDialogCancel [disabled]="store.stopping()">Keep sending</button>
+        <button hlmAlertDialogAction variant="destructive" [disabled]="store.stopping()" (click)="confirmStop()">
+          @if (store.stopping()) {
+            <hlm-spinner class="size-4" />
+          }
+          Stop sending
+        </button>
+      </hlm-alert-dialog-footer>
+    </hlm-alert-dialog-content>
+  </hlm-alert-dialog>
+} @else {
+  <div hlmEmpty class="h-full min-h-64">
+    <div hlmEmptyHeader>
+      <div hlmEmptyMedia variant="icon"><ng-icon name="lucideMailOpen" /></div>
+      <div hlmEmptyTitle>No request selected</div>
+      <div hlmEmptyDescription>Pick a request from the list to read it here.</div>
+    </div>
+  </div>
+}

@@ -44,32 +44,37 @@
   </div>
 </div>
 
-<!-- Table -->
+<!-- List + reading pane (email-client layout on wide screens) -->
+<div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_24rem] xl:grid-cols-[minmax(0,1fr)_28rem]">
+<div class="min-w-0">
 <div class="overflow-hidden rounded-lg border">
   <div hlmTableContainer>
     <table hlmTable>
       <thead hlmTHead>
         <tr hlmTr>
-          <th hlmTh class="w-40">Received</th>
           <th hlmTh>From</th>
           @if (store.showCompany()) {
-            <th hlmTh class="hidden md:table-cell">Company</th>
+            <th hlmTh class="hidden 2xl:table-cell">Company</th>
           }
-          <th hlmTh class="hidden lg:table-cell">Subject</th>
-          <th hlmTh class="w-32">Status</th>
+          <th hlmTh class="w-28">Status</th>
+          <th hlmTh class="w-28 text-end">Received</th>
         </tr>
       </thead>
       <tbody hlmTBody>
         @if (store.loading() && store.items().length === 0) {
           @for (row of skeletonRows; track row) {
             <tr hlmTr>
-              <td hlmTd><hlm-skeleton class="h-4 w-28" /></td>
-              <td hlmTd><hlm-skeleton class="h-4 w-48" /></td>
+              <td hlmTd>
+                <div class="grid gap-1.5">
+                  <hlm-skeleton class="h-4 w-40" />
+                  <hlm-skeleton class="h-3 w-56" />
+                </div>
+              </td>
               @if (store.showCompany()) {
-                <td hlmTd class="hidden md:table-cell"><hlm-skeleton class="h-4 w-24" /></td>
+                <td hlmTd class="hidden 2xl:table-cell"><hlm-skeleton class="h-4 w-24" /></td>
               }
-              <td hlmTd class="hidden lg:table-cell"><hlm-skeleton class="h-4 w-64" /></td>
               <td hlmTd><hlm-skeleton class="h-5 w-16 rounded-full" /></td>
+              <td hlmTd><hlm-skeleton class="ms-auto h-4 w-16" /></td>
             </tr>
           }
         } @else {
@@ -77,33 +82,36 @@
             <tr
               hlmTr
               class="cursor-pointer"
+              [class.bg-muted]="store.selectedId() === request.id"
               [class.opacity-60]="store.loading()"
+              [attr.aria-selected]="store.selectedId() === request.id"
               tabindex="0"
               (click)="store.open(request)"
               (keydown.enter)="store.open(request)"
             >
-              <td hlmTd class="text-muted-foreground whitespace-nowrap" [title]="request.createdAt | date: 'full'">
-                {{ request.createdAt | date: 'MMM d, HH:mm' }}
-              </td>
-              <td hlmTd>
-                <div class="grid min-w-0">
-                  <span class="truncate font-medium">{{ request.fullName }}</span>
-                  <span class="text-muted-foreground truncate text-xs">{{ request.email }}</span>
+              <td hlmTd class="max-w-0">
+                <div class="grid min-w-0 gap-0.5">
+                  <span class="truncate font-medium">
+                    {{ request.fullName }}
+                    @if (store.showCompany()) {
+                      <span class="text-muted-foreground font-normal 2xl:hidden">· {{ request.siteName }}</span>
+                    }
+                  </span>
+                  <span class="text-muted-foreground truncate text-xs">
+                    @if (request.subject) {
+                      <span class="text-foreground/80">{{ request.subject }}</span> —
+                    }
+                    {{ preview(request.message) }}
+                  </span>
                 </div>
               </td>
               @if (store.showCompany()) {
-                <td hlmTd class="hidden md:table-cell">{{ request.siteName }}</td>
+                <td hlmTd class="hidden 2xl:table-cell">{{ request.siteName }}</td>
               }
-              <td hlmTd class="hidden max-w-md lg:table-cell">
-                <span class="block truncate">
-                  @if (request.subject) {
-                    {{ request.subject }}
-                  } @else {
-                    <span class="text-muted-foreground">{{ preview(request.message) }}</span>
-                  }
-                </span>
-              </td>
               <td hlmTd><app-status-badge [request]="request" /></td>
+              <td hlmTd class="text-muted-foreground text-end text-xs whitespace-nowrap" [title]="request.createdAt | date: 'full'">
+                {{ request.createdAt | date: 'MMM d, HH:mm' }}
+              </td>
             </tr>
           }
         }
@@ -155,4 +163,18 @@
   />
 }
 
-<app-request-detail />
+</div>
+
+  @if (wide()) {
+    <aside
+      class="bg-card sticky top-18 max-h-[calc(100svh-5.5rem)] overflow-y-auto rounded-lg border p-4"
+      aria-label="Selected request"
+    >
+      <app-request-reading-pane />
+    </aside>
+  }
+</div>
+
+@if (!wide()) {
+  <app-request-sheet />
+}

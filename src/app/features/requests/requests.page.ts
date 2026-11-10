@@ -9,10 +9,20 @@ import { HlmPaginationImports } from '@spartan-ng/helm/pagination';
 import { HlmSkeleton } from '@spartan-ng/helm/skeleton';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import { PageHeader } from '../../shared/page-header';
-import { RequestDetail } from './request-detail';
+import { mediaQuery } from '../../shared/media-query';
+import { RequestReadingPane } from './request-reading-pane';
+import { RequestSheet } from './request-sheet';
 import { REQUEST_STATUSES, type RequestStatus } from './requests.models';
 import { RequestsStore } from './requests.store';
 import { StatusBadge } from './status-badge';
+
+const STATUS_LABELS: Record<RequestStatus, string> = {
+  pending: 'Pending',
+  queued: 'Queued',
+  sent: 'Sent',
+  failed: 'Failed',
+  cancelled: 'Stopped',
+};
 
 @Component({
   selector: 'app-requests-page',
@@ -27,7 +37,8 @@ import { StatusBadge } from './status-badge';
     HlmSkeleton,
     HlmTableImports,
     PageHeader,
-    RequestDetail,
+    RequestReadingPane,
+    RequestSheet,
     StatusBadge,
   ],
   providers: [RequestsStore, provideIcons({ lucideInbox, lucideRefreshCw, lucideSearch, lucideSearchX, lucideX })],
@@ -38,8 +49,11 @@ export class RequestsPage {
 
   protected readonly statusOptions: { value: RequestStatus | null; label: string }[] = [
     { value: null, label: 'All' },
-    ...REQUEST_STATUSES.map((value) => ({ value, label: value.charAt(0).toUpperCase() + value.slice(1) })),
+    ...REQUEST_STATUSES.map((value) => ({ value, label: STATUS_LABELS[value] })),
   ];
+
+  /** Wide screens show the reading pane next to the list, like an email client. */
+  protected readonly wide = mediaQuery('(min-width: 1024px)');
 
   protected readonly skeletonRows = Array.from({ length: 6 }, (_, i) => i);
 

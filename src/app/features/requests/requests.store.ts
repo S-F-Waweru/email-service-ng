@@ -2,6 +2,7 @@ import { computed, effect, inject, Injectable, signal, untracked } from '@angula
 import { ApiService } from '../../core/api/api.service';
 import { ApiError } from '../../core/api/api-error';
 import { CompanyStore } from '../../core/company/company.store';
+import { Notify } from '../../core/notify/notify.service';
 import type { ContactRequest, RequestFilters, RequestPage, RequestStatus } from './requests.models';
 
 const SEARCH_DEBOUNCE_MS = 350;
@@ -14,12 +15,14 @@ const SEARCH_DEBOUNCE_MS = 350;
 export class RequestsStore {
   private readonly api = inject(ApiService);
   private readonly company = inject(CompanyStore);
+  private readonly notify = inject(Notify);
 
   private readonly _filters = signal<RequestFilters>({ status: null, q: '', page: 1, limit: 20 });
   private readonly _page = signal<RequestPage | null>(null);
   private readonly _loading = signal(false);
   private readonly _error = signal<ApiError | null>(null);
   private readonly _selectedId = signal<string | null>(null);
+  private readonly _stopping = signal(false);
   /** What's typed in the search box; `filters.q` follows it after a pause. */
   readonly searchText = signal('');
 
@@ -32,7 +35,9 @@ export class RequestsStore {
   readonly hasFilters = computed(() => this._filters().status !== null || this._filters().q !== '');
   /** Show the company column only when several companies are listed. */
   readonly showCompany = computed(() => this.company.siteId() === null && this.company.sites().length > 1);
+  readonly selectedId = this._selectedId.asReadonly();
   readonly selected = computed(() => this.items().find((r) => r.id === this._selectedId()) ?? null);
+  readonly stopping = this._stopping.asReadonly();
 
   private searchTimer?: ReturnType<typeof setTimeout>;
   private requestSeq = 0;
@@ -87,8 +92,34 @@ export class RequestsStore {
     this._selectedId.set(null);
   }
 
+  /** Stops delivery of an unsent request. Returns false on failure (toast shown). */
+  async stopDelivery(id: string): Promise<boolean> {
+    if (this._stopping()) return false;
+    this._stopping.set(true);
+    try {
+      const updated = await this.api.post<ContactRequest>(`/requests/${id}/stop`, null, {
+        toast: 'Could not stop delivery',
+      });
+      this.replaceItem(updated);
+      this.notify.success('Delivery stopped', 'No more attempts will be made for this request.');
+      return true;
+    } catch (error) {
+      // 409: it was sent (or gave up) meanwhile. Refresh so the row shows the truth.
+      if (error instanceof ApiError && error.status === 409) this.reload();
+      return false;
+    } finally {
+      this._stopping.set(false);
+    }
+  }
+
   reload(): void {
     void this.load(this._filters(), this.company.siteId());
+  }
+
+  private replaceItem(item: ContactRequest): void {
+    this._page.update((page) =>
+      page ? { ...page, items: page.items.map((r) => (r.id === item.id ? item : r)) } : page,
+    );
   }
 
   private async load(filters: RequestFilters, siteId: string | null): Promise<void> {

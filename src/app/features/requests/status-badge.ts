@@ -21,6 +21,8 @@ export class StatusBadge {
         return { label: 'Queued', class: 'bg-warning/15 text-warning' };
       case 'pending':
         return { label: 'Pending', class: 'bg-muted text-muted-foreground' };
+      case 'cancelled':
+        return { label: 'Stopped', class: 'bg-muted text-muted-foreground line-through decoration-1' };
       case 'failed':
         return delivery.willRetry
           ? { label: `Retrying ${delivery.attempts}/${delivery.maxAttempts}`, class: 'bg-warning/15 text-warning' }
