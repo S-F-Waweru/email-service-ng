@@ -1,2 +1,158 @@
-<app-page-header title="Requests" description="Contact form submissions and how their emails were delivered." />
-<app-coming-soon icon="lucideInbox" text="Searchable list with status filters, paging and a delivery detail panel." />
+<app-page-header title="Requests" description="Contact form submissions and how their emails were delivered.">
+  <button hlmBtn variant="outline" size="sm" (click)="store.reload()" [disabled]="store.loading()">
+    <ng-icon name="lucideRefreshCw" [class.animate-spin]="store.loading()" />
+    Refresh
+  </button>
+</app-page-header>
+
+<!-- Filters -->
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <div hlmInputGroup class="w-full sm:w-72">
+    <div hlmInputGroupAddon>
+      <ng-icon name="lucideSearch" />
+    </div>
+    <input
+      hlmInputGroupInput
+      type="search"
+      placeholder="Search name, email or subject"
+      aria-label="Search requests"
+      maxlength="100"
+      [value]="store.searchText()"
+      (input)="store.setSearch($any($event.target).value)"
+    />
+    @if (store.searchText()) {
+      <div hlmInputGroupAddon align="inline-end">
+        <button hlmInputGroupButton size="icon-xs" aria-label="Clear search" (click)="store.setSearch('')">
+          <ng-icon name="lucideX" />
+        </button>
+      </div>
+    }
+  </div>
+
+  <div class="flex flex-wrap gap-1" role="group" aria-label="Filter by status">
+    @for (option of statusOptions; track option.label) {
+      <button
+        hlmBtn
+        size="sm"
+        [variant]="store.filters().status === option.value ? 'default' : 'ghost'"
+        [attr.aria-pressed]="store.filters().status === option.value"
+        (click)="store.setStatus(option.value)"
+      >
+        {{ option.label }}
+      </button>
+    }
+  </div>
+</div>
+
+<!-- Table -->
+<div class="overflow-hidden rounded-lg border">
+  <div hlmTableContainer>
+    <table hlmTable>
+      <thead hlmTHead>
+        <tr hlmTr>
+          <th hlmTh class="w-40">Received</th>
+          <th hlmTh>From</th>
+          @if (store.showCompany()) {
+            <th hlmTh class="hidden md:table-cell">Company</th>
+          }
+          <th hlmTh class="hidden lg:table-cell">Subject</th>
+          <th hlmTh class="w-32">Status</th>
+        </tr>
+      </thead>
+      <tbody hlmTBody>
+        @if (store.loading() && store.items().length === 0) {
+          @for (row of skeletonRows; track row) {
+            <tr hlmTr>
+              <td hlmTd><hlm-skeleton class="h-4 w-28" /></td>
+              <td hlmTd><hlm-skeleton class="h-4 w-48" /></td>
+              @if (store.showCompany()) {
+                <td hlmTd class="hidden md:table-cell"><hlm-skeleton class="h-4 w-24" /></td>
+              }
+              <td hlmTd class="hidden lg:table-cell"><hlm-skeleton class="h-4 w-64" /></td>
+              <td hlmTd><hlm-skeleton class="h-5 w-16 rounded-full" /></td>
+            </tr>
+          }
+        } @else {
+          @for (request of store.items(); track request.id) {
+            <tr
+              hlmTr
+              class="cursor-pointer"
+              [class.opacity-60]="store.loading()"
+              tabindex="0"
+              (click)="store.open(request)"
+              (keydown.enter)="store.open(request)"
+            >
+              <td hlmTd class="text-muted-foreground whitespace-nowrap" [title]="request.createdAt | date: 'full'">
+                {{ request.createdAt | date: 'MMM d, HH:mm' }}
+              </td>
+              <td hlmTd>
+                <div class="grid min-w-0">
+                  <span class="truncate font-medium">{{ request.fullName }}</span>
+                  <span class="text-muted-foreground truncate text-xs">{{ request.email }}</span>
+                </div>
+              </td>
+              @if (store.showCompany()) {
+                <td hlmTd class="hidden md:table-cell">{{ request.siteName }}</td>
+              }
+              <td hlmTd class="hidden max-w-md lg:table-cell">
+                <span class="block truncate">
+                  @if (request.subject) {
+                    {{ request.subject }}
+                  } @else {
+                    <span class="text-muted-foreground">{{ preview(request.message) }}</span>
+                  }
+                </span>
+              </td>
+              <td hlmTd><app-status-badge [request]="request" /></td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  @if (store.isEmpty()) {
+    <div hlmEmpty class="py-12">
+      <div hlmEmptyHeader>
+        <div hlmEmptyMedia variant="icon">
+          <ng-icon [name]="store.hasFilters() ? 'lucideSearchX' : 'lucideInbox'" />
+        </div>
+        <div hlmEmptyTitle>{{ store.hasFilters() ? 'No matching requests' : 'No requests yet' }}</div>
+        <div hlmEmptyDescription>
+          {{ store.hasFilters() ? 'Try a different search or status.' : 'Submissions from your websites will appear here.' }}
+        </div>
+      </div>
+      @if (store.hasFilters()) {
+        <div hlmEmptyContent>
+          <button hlmBtn variant="outline" size="sm" (click)="store.clearFilters()">Clear filters</button>
+        </div>
+      }
+    </div>
+  }
+
+  @if (store.error() && store.items().length === 0) {
+    <div hlmEmpty class="py-12">
+      <div hlmEmptyHeader>
+        <div hlmEmptyTitle>{{ store.error()!.title }}</div>
+        <div hlmEmptyDescription>{{ store.error()!.messages[0] }}</div>
+      </div>
+      <div hlmEmptyContent>
+        <button hlmBtn variant="outline" size="sm" (click)="store.reload()">Try again</button>
+      </div>
+    </div>
+  }
+</div>
+
+@if (store.total() > 0) {
+  <hlm-numbered-pagination
+    class="mt-4"
+    [currentPage]="store.filters().page"
+    (currentPageChange)="store.setPage($event)"
+    [itemsPerPage]="store.filters().limit"
+    (itemsPerPageChange)="store.setLimit($event)"
+    [totalItems]="store.total()"
+    [pageSizes]="[10, 20, 50, 100]"
+  />
+}
+
+<app-request-detail />

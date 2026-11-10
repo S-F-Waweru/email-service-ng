@@ -1,0 +1,102 @@
+<hlm-sheet side="right" [state]="request() ? 'open' : 'closed'" (stateChanged)="onStateChange($event)">
+  <hlm-sheet-content *hlmSheetPortal="let ctx" class="w-full overflow-y-auto data-[side=right]:sm:max-w-lg">
+    @if (request(); as r) {
+      <hlm-sheet-header>
+        <div class="flex items-center gap-2">
+          <app-status-badge [request]="r" />
+          <span class="text-muted-foreground text-xs">{{ r.createdAt | date: 'medium' }}</span>
+        </div>
+        <h2 hlmSheetTitle class="text-base">{{ r.subject || 'No subject' }}</h2>
+        <p hlmSheetDescription>From {{ r.fullName }} via {{ r.siteName }}</p>
+      </hlm-sheet-header>
+
+      <div class="grid gap-6 px-4 pb-6">
+        <!-- Sender -->
+        <dl class="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-2 text-xs">
+          <dt class="text-muted-foreground">Name</dt>
+          <dd>{{ r.fullName }}</dd>
+
+          <dt class="text-muted-foreground">Email</dt>
+          <dd class="flex items-center gap-1">
+            <a class="text-primary truncate hover:underline" [href]="'mailto:' + r.email">{{ r.email }}</a>
+            <button hlmBtn variant="ghost" size="icon-xs" aria-label="Copy email" (click)="copy(r.email, 'Email')">
+              <ng-icon name="lucideCopy" />
+            </button>
+          </dd>
+
+          <dt class="text-muted-foreground">Phone</dt>
+          <dd class="flex items-center gap-1">
+            <a class="hover:underline" [href]="'tel:' + r.phoneNumber">{{ r.phoneNumber }}</a>
+            <button hlmBtn variant="ghost" size="icon-xs" aria-label="Copy phone" (click)="copy(r.phoneNumber, 'Phone number')">
+              <ng-icon name="lucideCopy" />
+            </button>
+          </dd>
+
+          @if (r.company) {
+            <dt class="text-muted-foreground">Their company</dt>
+            <dd>{{ r.company }}</dd>
+          }
+
+          <dt class="text-muted-foreground">Website</dt>
+          <dd>{{ r.siteName }}</dd>
+        </dl>
+
+        <!-- Message -->
+        <section class="grid gap-2">
+          <h3 class="text-sm font-medium">Message</h3>
+          <p class="bg-muted/50 rounded-md p-3 text-sm whitespace-pre-wrap break-words">{{ r.message }}</p>
+          <div>
+            <a hlmBtn size="sm" [href]="replyHref()">
+              <ng-icon name="lucideReply" />
+              Reply by email
+            </a>
+          </div>
+        </section>
+
+        <div hlmSeparator></div>
+
+        <!-- Delivery -->
+        <section class="grid gap-3">
+          <h3 class="text-sm font-medium">Delivery</h3>
+          <dl class="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-2 text-xs">
+            <dt class="text-muted-foreground">Sent to</dt>
+            <dd>{{ r.delivery.deliveredTo ?? '—' }}</dd>
+
+            <dt class="text-muted-foreground">CC</dt>
+            <dd>{{ r.delivery.cc.length ? r.delivery.cc.join(', ') : '—' }}</dd>
+
+            <dt class="text-muted-foreground">Sent at</dt>
+            <dd>{{ r.delivery.sentAt ? (r.delivery.sentAt | date: 'medium') : '—' }}</dd>
+
+            <dt class="text-muted-foreground">Attempts</dt>
+            <dd class="flex items-center gap-2">
+              {{ r.delivery.attempts }} of {{ r.delivery.maxAttempts }}
+              <span class="bg-muted h-1.5 w-24 overflow-hidden rounded-full">
+                <span
+                  class="block h-full rounded-full"
+                  [class]="r.status === 'sent' ? 'bg-success' : r.status === 'failed' ? 'bg-destructive' : 'bg-warning'"
+                  [style.width.%]="(r.delivery.attempts / r.delivery.maxAttempts) * 100"
+                ></span>
+              </span>
+            </dd>
+
+            @if (r.delivery.lastAttemptAt) {
+              <dt class="text-muted-foreground">Last attempt</dt>
+              <dd>{{ r.delivery.lastAttemptAt | date: 'medium' }}</dd>
+            }
+          </dl>
+
+          @if (r.delivery.lastError) {
+            <div role="alert" class="bg-destructive/10 text-destructive grid gap-1 rounded-md p-3 text-xs">
+              <span class="flex items-center gap-1.5 font-medium">
+                <ng-icon name="lucideCircleAlert" />
+                {{ r.delivery.willRetry ? 'Last attempt failed — will retry automatically' : 'Delivery failed' }}
+              </span>
+              <span class="font-mono break-words">{{ r.delivery.lastError }}</span>
+            </div>
+          }
+        </section>
+      </div>
+    }
+  </hlm-sheet-content>
+</hlm-sheet>
