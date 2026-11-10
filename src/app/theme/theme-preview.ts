@@ -182,6 +182,14 @@ type LogoKey = 'primary' | 'secondary';
               />
             </div>
 
+            <label class="flex items-center gap-2 text-sm">
+              <hlm-switch
+                [checked]="theme.brand().sidebar === 'primary'"
+                (checkedChange)="theme.previewBrand({ sidebar: $event ? 'primary' : 'neutral' })"
+              />
+              Sidebar uses the primary colour
+            </label>
+
             @if (error()) {
               <p class="text-destructive text-xs">{{ error() }}</p>
             }
@@ -213,8 +221,8 @@ type LogoKey = 'primary' | 'secondary';
           <div hlmCardContent class="flex flex-wrap items-center gap-8">
             <app-brand-logo class="h-10" />
             <app-brand-logo variant="secondary" class="h-10" />
-            <div class="bg-sidebar flex items-center gap-2 rounded-lg border p-2">
-              <app-brand-logo variant="secondary" class="h-6" />
+            <div class="bg-sidebar text-sidebar-foreground flex items-center gap-2 rounded-lg border p-2">
+              <app-brand-logo variant="secondary" surface="sidebar" class="h-6" />
               <span class="text-sm font-medium">{{ theme.brand().shortName ?? theme.brand().name }}</span>
             </div>
           </div>
@@ -343,8 +351,8 @@ export class ThemePreview {
   ];
 
   protected readonly snippet = computed(() => {
-    const { colors, radius } = this.theme.brand();
-    return `colors: {\n  primary: '${colors.primary}',\n  secondary: '${colors.secondary}',\n},\nradius: ${radius},`;
+    const { colors, radius, sidebar } = this.theme.brand();
+    return `colors: {\n  primary: '${colors.primary}',\n  secondary: '${colors.secondary}',\n},\nradius: ${radius},\nsidebar: '${sidebar ?? 'neutral'}',`;
   });
 
   private readonly objectUrls: string[] = [];

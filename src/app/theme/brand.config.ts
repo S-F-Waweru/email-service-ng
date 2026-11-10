@@ -33,6 +33,9 @@ export const brand: BrandConfig = {
   // Corner radius in rem. 0 = square, 0.625 = Spartan default, 1 = very round.
   radius: 0.625,
 
+  // 'primary' fills the sidebar with the primary colour; 'neutral' keeps it light/grey.
+  sidebar: 'primary',
+
   // What first-time visitors get before they pick a mode themselves.
   defaultMode: 'system',
 };

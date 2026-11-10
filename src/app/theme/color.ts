@@ -1,3 +1,5 @@
+import type { SidebarStyle } from './brand.types';
+
 // Small colour toolkit: turns the two brand hex colours into the full set of
 // Spartan CSS variables (light + dark). Uses OKLCH, the same space Spartan's
 // default theme is written in, so lightness changes look even across hues.
@@ -103,7 +105,7 @@ export type ThemeTokens = Record<string, string>;
  * Brand-driven Spartan tokens. Neutrals (background, border, muted, ...) stay
  * as defined in styles.css; only the colour-bearing tokens are replaced.
  */
-export function buildBrandTokens(primaryHex: string, secondaryHex: string) {
+export function buildBrandTokens(primaryHex: string, secondaryHex: string, sidebar: SidebarStyle = 'neutral') {
   const primary = hexToOklch(primaryHex);
   const secondary = hexToOklch(secondaryHex);
 
@@ -150,7 +152,44 @@ export function buildBrandTokens(primaryHex: string, secondaryHex: string) {
     '--chart-2': css(secondaryDark),
   };
 
+  if (sidebar === 'primary') {
+    Object.assign(light, brandSidebarTokens(primary, secondary));
+    // Dark mode: a deep version of the brand colour, so the sidebar still
+    // reads as "brand" without glowing next to the dark page.
+    Object.assign(dark, brandSidebarTokens({ ...primary, l: Math.min(Math.max(primary.l, 0.26), 0.34) }, secondaryDark));
+  }
+
   return { light, dark };
+}
+
+
+/**
+ * Sidebar filled with the brand colour. Hover/active items are the same hue
+ * shifted in lightness; the secondary colour marks the company badge and
+ * focus ring.
+ */
+function brandSidebarTokens(bg: Oklch, accent: Oklch): ThemeTokens {
+  const fg = readableOn(bg);
+  const lightText = fg === WHITE;
+  // Move toward the text colour so hover/active stand out on either kind of bg.
+  const shift = (amount: number): Oklch => ({ ...bg, l: Math.min(0.97, Math.max(0.05, bg.l + (lightText ? amount : -amount))) });
+  return {
+    '--sidebar': css(bg),
+    '--sidebar-foreground': css(fg),
+    '--sidebar-accent': css(shift(0.08)),
+    '--sidebar-accent-foreground': css(fg),
+    '--sidebar-primary': css(accent),
+    '--sidebar-primary-foreground': css(readableOn(accent)),
+    '--sidebar-border': lightText ? 'oklch(1 0 0 / 15%)' : 'oklch(0 0 0 / 12%)',
+    '--sidebar-ring': css(accent),
+  };
+}
+
+/** True when the sidebar background is dark enough to need the dark-mode logo. */
+export function sidebarIsDark(primaryHex: string, mode: 'light' | 'dark', sidebar: SidebarStyle): boolean {
+  if (sidebar === 'neutral') return mode === 'dark';
+  if (mode === 'dark') return true;
+  return readableOn(hexToOklch(primaryHex)) === WHITE;
 }
 
 export interface ExtractedColor {

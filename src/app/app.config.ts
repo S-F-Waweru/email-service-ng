@@ -7,6 +7,7 @@ import {
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
 import { provideRouter, TitleStrategy, withComponentInputBinding } from '@angular/router';
+import { provideHlmSidebarConfig } from '@spartan-ng/helm/sidebar';
 import { provideSpartanHlm } from '@spartan-ng/helm/utils';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth.interceptor';
@@ -24,6 +25,8 @@ export const appConfig: ApplicationConfig = {
     { provide: TitleStrategy, useExisting: PageTitleStrategy },
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
     provideSpartanHlm(),
+    // Narrower than Spartan's 16rem default.
+    provideHlmSidebarConfig({ sidebarWidth: '13.5rem' }),
     provideAppInitializer(() => {
       // Brand colours, favicon and dark mode before the first render.
       inject(ThemeService);

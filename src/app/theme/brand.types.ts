@@ -1,5 +1,8 @@
 export type ThemeMode = 'light' | 'dark' | 'system';
 
+/** `neutral`: Spartan's light/grey sidebar. `primary`: filled with the primary colour. */
+export type SidebarStyle = 'neutral' | 'primary';
+
 export interface LogoSource {
   light: string;
   /** Used in dark mode; falls back to `light`. */
@@ -22,5 +25,7 @@ export interface BrandConfig {
   };
   /** Corner radius in rem. */
   radius: number;
+  /** Sidebar background. Default `neutral`. */
+  sidebar?: SidebarStyle;
   defaultMode: ThemeMode;
 }

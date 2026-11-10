@@ -2,7 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { brand as configuredBrand } from './brand.config';
 import type { BrandConfig, LogoSource, ThemeMode } from './brand.types';
-import { buildBrandTokens, type ThemeTokens } from './color';
+import { buildBrandTokens, sidebarIsDark, type ThemeTokens } from './color';
 
 // Same key as the inline script in index.html, which applies the mode before
 // Angular starts so a dark-mode user never sees a white flash.
@@ -24,8 +24,15 @@ export class ThemeService {
     this.mode() === 'system' ? this.systemDark() : this.mode() === 'dark',
   );
 
-  readonly primaryLogo = computed(() => this.pick(this.brand().logo.primary));
-  readonly secondaryLogo = computed(() => this.pick(this.brand().logo.secondary));
+  /** Whether the sidebar background is dark (picks the logo file that shows on it). */
+  readonly sidebarDark = computed(() =>
+    sidebarIsDark(this.brand().colors.primary, this.isDark() ? 'dark' : 'light', this.brand().sidebar ?? 'neutral'),
+  );
+
+  readonly primaryLogo = computed(() => this.pick(this.brand().logo.primary, this.isDark()));
+  readonly secondaryLogo = computed(() => this.pick(this.brand().logo.secondary, this.isDark()));
+  readonly sidebarPrimaryLogo = computed(() => this.pick(this.brand().logo.primary, this.sidebarDark()));
+  readonly sidebarSecondaryLogo = computed(() => this.pick(this.brand().logo.secondary, this.sidebarDark()));
 
   constructor() {
     this.media?.addEventListener('change', (e) => this.systemDark.set(e.matches));
@@ -62,12 +69,12 @@ export class ThemeService {
     this.brand.set(configuredBrand);
   }
 
-  private pick(source: LogoSource): string {
-    return (this.isDark() && source.dark) || source.light;
+  private pick(source: LogoSource, dark: boolean): string {
+    return (dark && source.dark) || source.light;
   }
 
   private applyBrand(brand: BrandConfig): void {
-    const { light, dark } = buildBrandTokens(brand.colors.primary, brand.colors.secondary);
+    const { light, dark } = buildBrandTokens(brand.colors.primary, brand.colors.secondary, brand.sidebar);
     const radius = `--radius: ${brand.radius}rem;`;
 
     // A <style> appended at the end of <head> comes after styles.css, so these
